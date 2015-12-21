@@ -1,0 +1,37 @@
+
+ToDo:
+
+Updates
+Views
+Stored Procs
+
+Add update:
+
+Make a function update many, which can update multiple records at once. Might be most efficient to do something like:
+
+INSERT INTO mytable (id, a, b, c)
+VALUES (1, 'a1', 'b1', 'c1'),
+(2, 'a2', 'b2', 'c2'),
+(3, 'a3', 'b3', 'c3'),
+(4, 'a4', 'b4', 'c4'),
+(5, 'a5', 'b5', 'c5'),
+(6, 'a6', 'b6', 'c6')
+ON DUPLICATE KEY UPDATE id=VALUES(id),
+a=VALUES(a),
+b=VALUES(b),
+c=VALUES(c);
+
+This insert new values into table, but if primary key is duplicated (already inserted into table) that values you specify would be updated and same record would not be inserted second time.
+
+The function interface should look like:
+
+@classmethod
+def update_many(cls, match_columns, match_column_values, update_columns, update_column_values)
+
+There would also be an object function like:
+
+def update(self, **kwargs)
+
+Where the user could update multiple values at once. If would figure out its primary key columns and use them as match columns for the function above.
+
+If an attribute is updated directly update is called internally.

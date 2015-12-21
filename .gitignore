@@ -1,0 +1,13 @@
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+*.pyc
+*.sln
+*.pyproj
+*.suo
+.cache
+logs/
+my_connection.py
