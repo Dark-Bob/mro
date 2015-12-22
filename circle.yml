@@ -1,0 +1,16 @@
+machine:
+  environent:
+    TOX_PY32: '3.2.5'
+    TOX_PY33: '3.3.3'
+    TOX_PY34: '3.4.3'
+    TOX_PY35: '3.5.0'
+
+dependencies:
+    override:
+        - pyenv local $TOX_PY35 $TOX_PY34 $TOX_PY33 $TOX_PY32
+    pre:
+        - pip install -r requirements.txt
+
+test:
+    override:
+        - tox -v
