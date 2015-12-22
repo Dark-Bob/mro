@@ -7,7 +7,7 @@ machine:
 
 dependencies:
     override:
-        - pyenv local $TOX_PY35 $TOX_PY34 $TOX_PY33 $TOX_PY32
+        - pyenv local '3.5.0' '3.4.3' '3.3.3' '3.2.5'
     pre:
         - pip install -r requirements.txt
 
