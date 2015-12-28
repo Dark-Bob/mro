@@ -2,12 +2,17 @@ machine:
   python:
     version: 3.5.0
 
+    environment:
+        DISTUTILS_DEBUG: 1
+
 test:
     override:
         - py.test
 
 dependencies:
     pre:
+        - pip install -U pip
+        - pip install -U wheel
         - pip install -r requirements.txt
 
 deployment:
