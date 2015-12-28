@@ -1,6 +1,6 @@
 machine:
-  python:
-    version: 3.5.0
+    python:
+        version: 3.5.0
 
     environment:
         DISTUTILS_DEBUG: 1
