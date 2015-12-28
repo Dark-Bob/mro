@@ -1,6 +1,9 @@
 machine:
-  python:
-    version: 3.5.0
+    python:
+        version: 3.5.0
+
+    environment:
+        DISTUTILS_DEBUG: 1
 
 test:
     override:
@@ -8,4 +11,14 @@ test:
 
 dependencies:
     pre:
+        - pip install -U pip
+        - pip install -U wheel
         - pip install -r requirements.txt
+
+deployment:
+  artifact:
+    branch: /.*/
+    commands:
+      - python setup.py sdist
+      - python setup.py bdist_wheel
+      - mv dist/ $CIRCLE_ARTIFACTS/dist/
