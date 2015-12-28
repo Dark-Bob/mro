@@ -53,6 +53,9 @@
     </Compile>
     <Compile Include="mro\__init__.py" />
     <Compile Include="mro_test.py" />
+    <Compile Include="schema_test.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="setup.py" />
     <Compile Include="stored_proc_test.py" />
     <Compile Include="table_test.py" />

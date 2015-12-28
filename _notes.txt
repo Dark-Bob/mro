@@ -1,9 +1,9 @@
 
 ToDo:
 
-Updates
 Views
 Stored Procs
+Schema
 
 Add update:
 
@@ -23,15 +23,3 @@ c=VALUES(c);
 
 This insert new values into table, but if primary key is duplicated (already inserted into table) that values you specify would be updated and same record would not be inserted second time.
 
-The function interface should look like:
-
-@classmethod
-def update_many(cls, match_columns, match_column_values, update_columns, update_column_values)
-
-There would also be an object function like:
-
-def update(self, **kwargs)
-
-Where the user could update multiple values at once. If would figure out its primary key columns and use them as match columns for the function above.
-
-If an attribute is updated directly update is called internally.
