@@ -5,7 +5,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>7e9cfb8d-27de-434c-bb69-33c0eeb547e3</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>tests\foreign_key_test.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>
@@ -30,15 +31,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="tests\connection.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="tests\data_types_test.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="tests\foreign_key_test.py">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="data_types_test.py" />
+    <Compile Include="foreign_key_test.py" />
     <Compile Include="mro\connection.py">
       <SubType>Code</SubType>
     </Compile>
@@ -58,24 +52,15 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="mro\__init__.py" />
-    <Compile Include="tests\mro_test.py" />
+    <Compile Include="mro_test.py" />
     <Compile Include="setup.py" />
-    <Compile Include="tests\stored_proc_test.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="tests\table_test.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="tests\update_test.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="tests\view_test.py">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="stored_proc_test.py" />
+    <Compile Include="table_test.py" />
+    <Compile Include="update_test.py" />
+    <Compile Include="view_test.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="mro\" />
-    <Folder Include="tests\" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\3.5" />
@@ -85,9 +70,7 @@
     <Content Include="circle.yml" />
     <Content Include="README.rst" />
     <Content Include="requirements.txt" />
-    <Content Include="tox.ini">
-      <SubType>Code</SubType>
-    </Content>
+    <Content Include="setup.cfg" />
     <Content Include="_notes.txt" />
   </ItemGroup>
   <PropertyGroup>
