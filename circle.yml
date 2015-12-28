@@ -9,3 +9,8 @@ test:
 dependencies:
     pre:
         - pip install -r requirements.txt
+
+deployment:
+    staging:
+        - python setup.py sdist
+        - python setup.py bdist_wheel
