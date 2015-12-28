@@ -10,4 +10,7 @@
 *.suo
 .cache
 logs/
+build/
+dist/
+mro.egg-info/
 my_connection.py
