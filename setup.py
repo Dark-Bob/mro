@@ -1,4 +1,4 @@
-"""An Object Relational Mapping module to automatically generate python classes froma database schema.
+﻿"""An Object Relational Mapping module to automatically generate python classes froma database schema.
 See:
 https://github.com/Dark-Bob/mro
 """
@@ -12,8 +12,8 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = f.read()
+#with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+#    long_description = f.read()
 
 exec(open('mro/version.py').read())
 packages = find_packages(exclude=['contrib', 'docs', 'tests'])
@@ -28,7 +28,7 @@ setup(
     version=__version__,
 
     description='An Object Relational Mapping (ORM) but in reverse, create classes from the database schema not the usual way round. Sometimes referred to as reverse ORM, database introspection and database reflection.',
-    long_description=long_description,
+    #long_description=long_description,
 
     # The project's main homepage.
     url='https://github.com/Dark-Bob/mro',

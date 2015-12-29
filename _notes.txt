@@ -4,6 +4,7 @@ ToDo:
 Views
 Stored Procs
 Schema
+Mogrify where clauses etc to protect against sql injection. At least search for semi colons to prevent new queries beng started
 
 Add update:
 
