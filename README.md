@@ -61,7 +61,7 @@ else:
 ```
 ###### Points to note:
 - More example usage can be found in the tests, if anything is still not very obvious please raise an issue and I'll create a tutorial
-- Looking at the last line you may be worried that to update several columns you'd make a database call for each one but there is an update function that can be used as below with an arbitrary number of column names as below. There are similar calls for multiple row inserts, etc.
+- Looking at the last line you may be worried that to update several columns you'd make a database call for each one but there is an update function that can be used as below with an arbitrary number of column names. There are similar calls for multiple row inserts, etc.
 ```
         user.update(last_login = datetime.now(), name = "Molly")
 ```
