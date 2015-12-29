@@ -6,6 +6,8 @@ Stored Procs
 Schema
 Mogrify where clauses etc to protect against sql injection. At least search for semi colons to prevent new queries beng started
 SQL builder
+Support paging via a generator to limit results size fo a single select
+
 Add update:
 
 Make a function update many, which can update multiple records at once. Might be most efficient to do something like:
