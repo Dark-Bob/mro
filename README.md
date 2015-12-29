@@ -78,7 +78,7 @@ Some of the other ORM packages SqlAlchemy, SqlObject, etc. support reverse ORM t
 
 ### Todos
 - Make it SQL injection safe
-- Support multiple scehmas
+- Support multiple schemas
 - Support stored procs
 - Support views
 
