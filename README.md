@@ -7,6 +7,12 @@
 
 Creating a way to simply interact with a predefined database schema in python. This package takes care of the vast majority of everyday calls and glue work you have to do to create a nice object oriented view of your database. 
 
+### Getting The Package
+
+```bash
+pip install git+git://github.com/Dark-Bob/mro.git
+```
+
 ### User Login Example 
 
 They say a picture is worth a thousand words. Here's hoping a code example is worth a couple too. We're going to outline how to use **mro** for a login.
