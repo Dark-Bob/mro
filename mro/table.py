@@ -69,6 +69,7 @@ class table(object):
 
         column_names = [column.name for column in cursor.description]
 
+        obj = None
         table._disable_insert =True
         for row in cursor:
             kwargs = {}
