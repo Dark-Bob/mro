@@ -26,9 +26,9 @@ class table(object):
         connection = con.connection
         cursor = connection.cursor()
         if clause is None:
-            cursor.execute("select * from {};".format(cls.__name__))
+            cursor.execute("select * from \"{}\";".format(cls.__name__))
         else:
-            cursor.execute("select * from {} where {};".format(cls.__name__, clause))
+            cursor.execute("select * from \"{}\" where {};".format(cls.__name__, clause))
         connection.commit()
 
         column_names = [column.name for column in cursor.description]
@@ -49,9 +49,9 @@ class table(object):
         connection = con.connection
         cursor = connection.cursor()
         if clause is None:
-            cursor.execute("select count(*) from {};".format(cls.__name__))
+            cursor.execute("select count(*) from \"{}\";".format(cls.__name__))
         else:
-            cursor.execute("select count(*) from {} where {};".format(cls.__name__, clause))
+            cursor.execute("select count(*) from \"{}\" where {};".format(cls.__name__, clause))
         connection.commit()
 
         for row in cursor:
@@ -62,9 +62,9 @@ class table(object):
         connection = con.connection
         cursor = connection.cursor()
         if clause is None:
-            cursor.execute("select * from {} limit 1;".format(cls.__name__))
+            cursor.execute("select * from \"{}\" limit 1;".format(cls.__name__))
         else:
-            cursor.execute("select * from {} where {} limit 1;".format(cls.__name__, clause))
+            cursor.execute("select * from \"{}\" where {} limit 1;".format(cls.__name__, clause))
         connection.commit()
 
         column_names = [column.name for column in cursor.description]
@@ -85,9 +85,9 @@ class table(object):
         connection = con.connection
         cursor = connection.cursor()
         if clause is None:
-            cursor.execute("delete from {};".format(cls.__name__))
+            cursor.execute("delete from \"{}\";".format(cls.__name__))
         else:
-            cursor.execute("delete from {} where {};".format(cls.__name__, clause))
+            cursor.execute("delete from \"{}\" where {};".format(cls.__name__, clause))
         connection.commit()
 
     @classmethod
@@ -110,7 +110,7 @@ class table(object):
             vals_str = ' ({})'.format(', '.join(vals_str_list))
 
         if cls._get_value_on_insert_columns_str:
-            sql = "insert into {t} {c} values{v} returning {c2}".format(
+            sql = "insert into \"{t}\" {c} values{v} returning {c2}".format(
                 t = cls.__name__, c = cols, v = vals_str, c2 = cls._get_value_on_insert_columns_str)
             cursor.execute(sql, vals)
             connection.commit()
@@ -122,7 +122,7 @@ class table(object):
                 obj = cls(**kwargs)
             table._disable_insert = False
         else:
-            sql = "insert into {t} {c} values{v}".format(
+            sql = "insert into \"{t}\" {c} values{v}".format(
                 t = cls.__name__, c = cols, v = vals_str)
             cursor.execute(sql, vals)
             connection.commit()
@@ -145,7 +145,7 @@ class table(object):
 
         aggregate_values = ','.join(cursor.mogrify(vals_str, x).decode("utf-8")  for x in values)
 
-        sql = "insert into {} ({}) values {}".format(
+        sql = "insert into \"{}\" ({}) values {}".format(
             cls.__name__, cols, aggregate_values)
         cursor.execute(sql)
         connection.commit()
@@ -164,7 +164,7 @@ class table(object):
         vals = list(kwargs.values()) + match_column_values
         update_column_str = ", ".join([c + '=%s' for c in kwargs.keys()])
         match_column_str = " and ".join([c + '=%s' for c in match_columns])
-        sql = "update {t} set {c} where {c2}".format(
+        sql = "update \"{t}\" set {c} where {c2}".format(
             t = cls.__name__, c = update_column_str, c2 = match_column_str)
         cursor.execute(sql, vals)
         connection.commit()
