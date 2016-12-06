@@ -26,10 +26,16 @@ class table(object):
         connection = con.connection
         cursor = connection.cursor()
         if clause is None:
-            cursor.execute("select * from \"{}\";".format(cls.__name__))
+            sql = "select * from \"{}\";".format(cls.__name__)
         else:
-            cursor.execute("select * from \"{}\" where {};".format(cls.__name__, clause))
-        connection.commit()
+            sql = "select * from \"{}\" where {};".format(cls.__name__, clause)
+
+        try:
+            cursor.execute(sql)
+            connection.commit()
+        except:
+            connection.rollback()
+            raise
 
         column_names = [column.name for column in cursor.description]
 
@@ -49,10 +55,16 @@ class table(object):
         connection = con.connection
         cursor = connection.cursor()
         if clause is None:
-            cursor.execute("select count(*) from \"{}\";".format(cls.__name__))
+            sql = "select count(*) from \"{}\";".format(cls.__name__)
         else:
-            cursor.execute("select count(*) from \"{}\" where {};".format(cls.__name__, clause))
-        connection.commit()
+            sql = "select count(*) from \"{}\" where {};".format(cls.__name__, clause)
+
+        try:
+            cursor.execute(sql)
+            connection.commit()
+        except:
+            connection.rollback()
+            raise
 
         for row in cursor:
             return row[0]
@@ -62,10 +74,16 @@ class table(object):
         connection = con.connection
         cursor = connection.cursor()
         if clause is None:
-            cursor.execute("select * from \"{}\" limit 1;".format(cls.__name__))
+            sql = "select * from \"{}\" limit 1;".format(cls.__name__)
         else:
-            cursor.execute("select * from \"{}\" where {} limit 1;".format(cls.__name__, clause))
-        connection.commit()
+            sql = "select * from \"{}\" where {} limit 1;".format(cls.__name__, clause)
+
+        try:
+            cursor.execute(sql)
+            connection.commit()
+        except:
+            connection.rollback()
+            raise
 
         column_names = [column.name for column in cursor.description]
 
@@ -85,10 +103,16 @@ class table(object):
         connection = con.connection
         cursor = connection.cursor()
         if clause is None:
-            cursor.execute("delete from \"{}\";".format(cls.__name__))
+            sql = "delete from \"{}\";".format(cls.__name__)
         else:
-            cursor.execute("delete from \"{}\" where {};".format(cls.__name__, clause))
-        connection.commit()
+            sql = "delete from \"{}\" where {};".format(cls.__name__, clause)
+
+        try:
+            cursor.execute(sql)
+            connection.commit()
+        except:
+            connection.rollback()
+            raise
 
     @classmethod
     def insert(cls, **kwargs):
@@ -112,8 +136,12 @@ class table(object):
         if cls._get_value_on_insert_columns_str:
             sql = "insert into \"{t}\" {c} values{v} returning {c2}".format(
                 t = cls.__name__, c = cols, v = vals_str, c2 = cls._get_value_on_insert_columns_str)
-            cursor.execute(sql, vals)
-            connection.commit()
+            try:
+                cursor.execute(sql, vals)
+                connection.commit()
+            except:
+                connection.rollback()
+                raise
 
             table._disable_insert = True
             for row in cursor:
@@ -124,8 +152,12 @@ class table(object):
         else:
             sql = "insert into \"{t}\" {c} values{v}".format(
                 t = cls.__name__, c = cols, v = vals_str)
-            cursor.execute(sql, vals)
-            connection.commit()
+            try:
+                cursor.execute(sql, vals)
+                connection.commit()
+            except:
+                connection.rollback()
+                raise
 
             table._disable_insert = True
             obj = cls(**kwargs)
@@ -147,8 +179,13 @@ class table(object):
 
         sql = "insert into \"{}\" ({}) values {}".format(
             cls.__name__, cols, aggregate_values)
-        cursor.execute(sql)
-        connection.commit()
+
+        try:
+            cursor.execute(sql)
+            connection.commit()
+        except:
+            connection.rollback()
+            raise
 
     @classmethod
     def update(cls, match_columns, match_column_values, **kwargs):
@@ -166,8 +203,13 @@ class table(object):
         match_column_str = " and ".join([c + '=%s' for c in match_columns])
         sql = "update \"{t}\" set {c} where {c2}".format(
             t = cls.__name__, c = update_column_str, c2 = match_column_str)
-        cursor.execute(sql, vals)
-        connection.commit()
+        try:
+            cursor.execute(sql, vals)
+            connection.commit()
+        except:
+            connection.rollback()
+            raise
+
 
     @classmethod
     def update_many(cls, match_columns, match_column_values, update_columns, update_column_values):
