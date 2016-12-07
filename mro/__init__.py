@@ -49,11 +49,13 @@ def _load_standard_db(connection):
         'time without time zone': ['time', defaultColumnToDataType, none_transform],
         'date': ['date', defaultColumnToDataType, none_transform],
         'boolean': ['boolean', defaultColumnToDataType, default_transform],
+        # TODO make work: 'bool': ['boolean', defaultColumnToDataType, default_transform],
         'text': ['text', defaultColumnToDataType, default_transform],
         'double precision': ['double', defaultColumnToDataType, default_transform],
         'real': ['real', defaultColumnToDataType, default_transform],
         'json': ['json', defaultColumnToDataType, default_transform],
         'jsonb': ['json', defaultColumnToDataType, default_transform],
+        'uuid': ['uuid', defaultColumnToDataType, default_transform],
         }
 
     # Get tables
@@ -170,7 +172,7 @@ def _create_classes(tables):
             code += "        self.__dict__['" + column_data[1] + "'] = " + str(column_data[2]) + "\n"
         code += """        for k, v in kwargs.items():
             if not hasattr(self, k):
-                raise ValueError("{} dos not have an attribute {}".format(self.__class__.__name__, k))
+                raise ValueError("{} does not have an attribute {}".format(self.__class__.__name__, k))
             self.__dict__[k] = v
 
         if not super()._disable_insert:
@@ -182,7 +184,14 @@ def _create_classes(tables):
         primary_key_columns = """ + table + """._primary_key_columns
         primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
 
-        super().update(primary_key_columns, primary_key_column_values, **kwargs)\n"""
+        super().update(primary_key_columns, primary_key_column_values, **kwargs)
+
+        mro.table.table._disable_insert = True
+        for k, v in kwargs.items():
+            self.__dict__[k] = v
+        mro.table.table._disable_insert = False
+
+        return self\n"""
         code += "{}._register()".format(table)
         exec(code)
         generated_class = eval(table)

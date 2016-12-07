@@ -3,6 +3,7 @@ import mro
 import connection as con
 import psycopg2
 from datetime import datetime, date, time
+import uuid
 xfail = pytest.mark.xfail
 
 class test_type(object):
@@ -37,7 +38,8 @@ def connection(request):
     "jsonb" jsonb,
     "text" text,
     "double" double precision,
-    "real" real)""")
+    "real" real,
+    "uuid" uuid)""")
     connection.commit()
 
     mro.load_database(connection)
@@ -193,6 +195,16 @@ class TestDataTypes(object):
         with pytest.raises(TypeError) as excinfo:
             obj.real = '1'
         assert excinfo.value.args[0] == 'Value should be of type [float] not [{}]'.format(str.__name__)
+
+    @xfail
+    def test_uuid(self, connection):
+        obj = mro.test_type(varchar = 'init')
+
+        obj.uuid = uuid.uuid4()
+        assert obj.uuid == uuid.uuid4()
+        with pytest.raises(TypeError) as excinfo:
+            obj.uuid = uuid.uuid4()
+        assert excinfo.value.args[0] == 'Value should be of type [uuid] not [{}]'.format(str.__name__)
 
 if __name__ == '__main__':
     pytest.main([__file__, '-rw'])

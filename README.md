@@ -13,6 +13,12 @@ Creating a way to simply interact with a predefined database schema in python. T
 pip install git+git://github.com/Dark-Bob/mro.git
 ```
 
+If the package has been updated and you want to pull a newer version:
+
+```bash
+pip install --upgrade --no-deps --force-reinstall git+git://github.com/Dark-Bob/mro.git
+```
+
 ### User Login Example 
 
 They say a picture is worth a thousand words. Here's hoping a code example is worth a couple too. We're going to outline how to use **mro** for a login.

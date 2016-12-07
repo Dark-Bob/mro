@@ -32,6 +32,11 @@ def connection(request):
     value varchar(20) not null
     );""")
 
+    cursor.execute("""create table table4 (
+    my_bool bool default False,
+    my_boolean boolean default True
+    );""")
+
     connection.commit()
 
     mro.load_database(connection)
@@ -76,13 +81,25 @@ class TestUpdates(object):
     def test_update_multiple_values(self, connection):
 
         table = mro.table1(name='Test35', value='first')
-        assert len(mro.table1.select("name='Test35'")) == 1
-        assert len(mro.table1.select("name='Test36'")) == 0
-        table.update(name='Test36', value='second')
-        assert len(mro.table1.select("name='Test35'")) == 0
-        assert len(mro.table1.select("name='Test36'")) == 1
+        assert mro.table1.select_count("name='Test35'") == 1
+        assert mro.table1.select_count("name='Test36'") == 0
+        table = table.update(name='Test36', value='second')
+        assert table.name == 'Test36'
+        assert table.value == 'second'
+        assert mro.table1.select_count("name='Test35'") == 0
+        assert mro.table1.select_count("name='Test36'") == 1
         selectedTable = mro.table1.select_one("name='Test36'")
         assert selectedTable.value == 'second'
+
+    @pytest.mark.xfail
+    def test_boolean(self, connection):
+
+        table = mro.table4.insert(my_bool=True,my_boolean=False)
+
+        table.my_bool = table.my_boolean
+
+        assert table.my_bool is False
+        assert table.my_boolean is False
 
 if __name__ == '__main__':
     pytest.main([__file__])

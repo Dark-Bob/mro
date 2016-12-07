@@ -1,6 +1,7 @@
 ﻿
 import psycopg2.extras
 import datetime
+import uuid as _uuid
 
 class database_type(object):
 
@@ -94,3 +95,8 @@ class real(database_type):
 
     def __init__(self, name, column_index, **kwargs):
         super().__init__(name, float, column_index, **kwargs)
+
+class uuid(database_type):
+
+    def __init__(self, name, column_index, **kwargs):
+        super().__init__(name, _uuid.UUID, column_index, **kwargs)
