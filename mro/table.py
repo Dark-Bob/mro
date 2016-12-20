@@ -26,13 +26,32 @@ class table(object):
         cls._primary_key_columns = [d.name for d in data_types if d.is_primary_key]
 
     @classmethod
-    def _execute_sql(cls, connection, cursor, sql, values=None):
+    def _get_cursor(cls):
+        retry_count = 0
+        while True:
+            try:
+                return con.connection.cursor()
+            except psycopg2.InterfaceError as e:
+                if retry_count == 3:
+                    raise
+                logger.exception("Connection failure while getting cursor, will attempt to reconnect.")
+                time.sleep(retry_count * 1)
+                con.reconnect()
+            except Exception as e:
+                logger.exception("Exception while getting sql cursor.")
+                raise
+            retry_count += 1
+
+    @classmethod
+    def _execute_sql(cls, sql, values=None, cursor=None):
+        if cursor is None:
+            cursor = cls._get_cursor()
         retry_count = 0
         retry = True
         while retry:
             try:
                 cursor.execute(sql, values)
-                connection.commit()
+                con.connection.commit()
                 retry = False
             except psycopg2.InterfaceError as e:
                 if retry_count == 3:
@@ -40,22 +59,22 @@ class table(object):
                 logger.exception("Connection failure will attempt to reconnect [{}] {}".format(sql, values))
                 time.sleep(retry_count * 1)
                 con.reconnect()
+                cursor = con.connection.cursor()
             except Exception as e:
                 logger.exception("Exception while executing sql [{}] {}".format(sql, values))
-                connection.rollback()
+                con.connection.rollback()
                 raise
             retry_count += 1
 
     @classmethod
     def select(cls, clause = None):
-        connection = con.connection
-        cursor = connection.cursor()
+        cursor = cls._get_cursor()
         if clause is None:
             sql = "select * from \"{}\";".format(cls.__name__)
         else:
             sql = "select * from \"{}\" where {};".format(cls.__name__, clause)
 
-        cls._execute_sql(connection, cursor, sql)
+        cls._execute_sql(sql, cursor=cursor)
 
         column_names = [column.name for column in cursor.description]
 
@@ -72,28 +91,26 @@ class table(object):
 
     @classmethod
     def select_count(cls, clause = None):
-        connection = con.connection
-        cursor = connection.cursor()
+        cursor = cls._get_cursor()
         if clause is None:
             sql = "select count(*) from \"{}\";".format(cls.__name__)
         else:
             sql = "select count(*) from \"{}\" where {};".format(cls.__name__, clause)
 
-        cls._execute_sql(connection, cursor, sql)
+        cls._execute_sql(sql, cursor=cursor)
 
         for row in cursor:
             return row[0]
 
     @classmethod
     def select_one(cls, clause = None):
-        connection = con.connection
-        cursor = connection.cursor()
+        cursor = cls._get_cursor()
         if clause is None:
             sql = "select * from \"{}\" limit 1;".format(cls.__name__)
         else:
             sql = "select * from \"{}\" where {} limit 1;".format(cls.__name__, clause)
 
-        cls._execute_sql(connection, cursor, sql)
+        cls._execute_sql(sql, cursor=cursor)
 
         column_names = [column.name for column in cursor.description]
 
@@ -110,22 +127,19 @@ class table(object):
 
     @classmethod
     def delete(cls, clause = None):
-        connection = con.connection
-        cursor = connection.cursor()
         if clause is None:
             sql = "delete from \"{}\";".format(cls.__name__)
         else:
             sql = "delete from \"{}\" where {};".format(cls.__name__, clause)
 
-        cls._execute_sql(connection, cursor, sql)
+        cls._execute_sql(sql)
 
     @classmethod
     def insert(cls, **kwargs):
         if table._disable_insert:
             return
 
-        connection = con.connection
-        cursor = connection.cursor()
+        cursor = cls._get_cursor()
         
         keys = kwargs.keys()
         if len(keys) == 0:
@@ -142,7 +156,7 @@ class table(object):
             sql = "insert into \"{t}\" {c} values{v} returning {c2}".format(
                 t = cls.__name__, c = cols, v = vals_str, c2 = cls._get_value_on_insert_columns_str)
 
-            cls._execute_sql(connection, cursor, sql, vals)
+            cls._execute_sql(sql, vals, cursor=cursor)
 
             table._disable_insert = True
             for row in cursor:
@@ -154,7 +168,7 @@ class table(object):
             sql = "insert into \"{t}\" {c} values{v}".format(
                 t = cls.__name__, c = cols, v = vals_str)
 
-            cls._execute_sql(connection, cursor, sql, vals)
+            cls._execute_sql(sql, vals, cursor=cursor)
 
             table._disable_insert = True
             obj = cls(**kwargs)
@@ -165,8 +179,7 @@ class table(object):
     @classmethod
     def insert_many(cls, cols, values):
 
-        connection = con.connection
-        cursor = connection.cursor()
+        cursor = cls._get_cursor()
 
         cols = ', '.join(cols)
         vals_str_list = ["%s"] * len(values[0])
@@ -177,7 +190,7 @@ class table(object):
         sql = "insert into \"{}\" ({}) values {}".format(
             cls.__name__, cols, aggregate_values)
 
-        cls._execute_sql(connection, cursor, sql)
+        cls._execute_sql(sql, cursor=cursor)
 
     @classmethod
     def update(cls, match_columns, match_column_values, **kwargs):
@@ -187,16 +200,13 @@ class table(object):
         if not match_columns:
             raise ValueError("Update needs columns to match to update, is your table missing a prmary key?")
 
-        connection = con.connection
-        cursor = connection.cursor()
-
         vals = list(kwargs.values()) + match_column_values
         update_column_str = ", ".join([c + '=%s' for c in kwargs.keys()])
         match_column_str = " and ".join([c + '=%s' for c in match_columns])
         sql = "update \"{t}\" set {c} where {c2}".format(
             t = cls.__name__, c = update_column_str, c2 = match_column_str)
 
-        cls._execute_sql(connection, cursor, sql, vals)
+        cls._execute_sql(sql, vals)
 
 
     @classmethod

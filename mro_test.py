@@ -67,5 +67,14 @@ class TestMro(object):
 
         mro.table3.insert(id=2)
 
+    def test_reconnect(self, connection):
+        try:
+            table = mro.table1.select_one()
+            mro.disconnect()
+
+            table.column1 = 1
+        except Exception as e:
+            print(e)
+
 if __name__ == '__main__':
     pytest.main([__file__])
