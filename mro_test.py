@@ -7,7 +7,7 @@ import connection as con
 @pytest.fixture(scope="module")
 def connection(request):
     connection = con.connect()
-    request.addfinalizer(con.disconnect)
+    request.addfinalizer(mro.disconnect)
 
     cursor = connection.cursor()
 
@@ -20,8 +20,9 @@ def connection(request):
     cursor.execute("insert into table1 (column1, column2, column3) values (%s,%s,%s)", (2,'Hellow World2!', 3))
     cursor.execute("insert into table2 (column1, column2, column3) values (%s,%s,%s)", ('Hellow World3!', 4, 'Hellow World4!'))
     connection.commit()
+    connection.close()
 
-    mro.load_database(connection)
+    mro.load_database(lambda: con.connect())
 
     return connection
 

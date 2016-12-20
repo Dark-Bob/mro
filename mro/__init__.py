@@ -4,9 +4,15 @@ import mro.data_types
 import mro.table
 import mro.sqlite
 
-def load_database(connection):
 
-    mro.connection.connection = connection
+def disconnect():
+    mro.connection.disconnect()
+
+
+def load_database(connection_function):
+
+    mro.connection.set_connection_function(connection_function)
+    connection = mro.connection.connection
 
     if connection.__class__.__module__ == 'sqlite3':
         tables = sqlite._load_sqllite_db(connection)

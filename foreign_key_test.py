@@ -7,7 +7,7 @@ import connection as con
 @pytest.fixture(scope="module")
 def connection(request):
     connection = con.connect()
-    request.addfinalizer(con.disconnect)
+    request.addfinalizer(mro.disconnect)
 
     cursor = connection.cursor()
 
@@ -43,10 +43,10 @@ def connection(request):
     );""")
 
     connection.commit()
-
-    mro.load_database(connection)
-
     create_test_data(connection)
+    connection.close()
+
+    mro.load_database(lambda: con.connect())
 
     return connection
 

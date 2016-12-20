@@ -45,9 +45,9 @@ import sys, psycopg2
 from datetime import datetime
 import mro
 
-# create a connection to your postgres database and 
-# load the database in mro before making any other mro calls
-mro.load_database(psycopg2.connect(database='circle_test', user='ubuntu'))
+# pass a function to create a connection to your postgres database
+# and load the database in mro before making any other mro calls
+mro.load_database(lambda: psycopg2.connect(database='circle_test', user='ubuntu'))
 # that's it all your tables in your database are now ready to be used as classes
 
 # passed in program arguments

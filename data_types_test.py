@@ -18,7 +18,7 @@ class test_type(object):
 @pytest.fixture(scope="module")
 def connection(request):
     connection = con.connect()
-    request.addfinalizer(con.disconnect)
+    request.addfinalizer(mro.disconnect)
 
     cursor = connection.cursor()
 
@@ -41,8 +41,9 @@ def connection(request):
     "real" real,
     "uuid" uuid)""")
     connection.commit()
+    connection.close()
 
-    mro.load_database(connection)
+    mro.load_database(lambda: con.connect())
 
     return connection
 
@@ -157,7 +158,6 @@ class TestDataTypes(object):
         with pytest.raises(psycopg2.DataError) as excinfo:
             obj.json = 'this is just text'
         assert excinfo.value.args[0].startswith('invalid input syntax for type json')
-        connection.rollback()
 
     def test_jsonb(self, connection):
         obj = mro.test_type(varchar = 'init')
@@ -167,7 +167,6 @@ class TestDataTypes(object):
         with pytest.raises(psycopg2.DataError) as excinfo:
             obj.jsonb = 'this is just text'
         assert excinfo.value.args[0].startswith('invalid input syntax for type json')
-        connection.rollback()
 
     def test_text(self, connection):
         obj = mro.test_type(varchar = 'init')

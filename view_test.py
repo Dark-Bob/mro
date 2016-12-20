@@ -8,7 +8,7 @@ xfail = pytest.mark.xfail
 @pytest.fixture(scope="module")
 def connection(request):
     connection = con.connect()
-    request.addfinalizer(con.disconnect)
+    request.addfinalizer(mro.disconnect)
 
     cursor = connection.cursor()
 

@@ -2,7 +2,11 @@
 import mro.connection as con
 import mro.data_types
 import mro.foreign_keys
-import json
+import time
+import psycopg2
+import logging
+
+logger = logging.getLogger(__name__)
 
 class table(object):
 
@@ -22,6 +26,27 @@ class table(object):
         cls._primary_key_columns = [d.name for d in data_types if d.is_primary_key]
 
     @classmethod
+    def _execute_sql(cls, connection, cursor, sql, values=None):
+        retry_count = 0
+        retry = True
+        while retry:
+            try:
+                cursor.execute(sql, values)
+                connection.commit()
+                retry = False
+            except psycopg2.InterfaceError as e:
+                if retry_count == 3:
+                    raise
+                logger.exception("Connection failure will attempt to reconnect [{}] {}".format(sql, values))
+                time.sleep(retry_count * 1)
+                con.reconnect()
+            except Exception as e:
+                logger.exception("Exception while executing sql [{}] {}".format(sql, values))
+                connection.rollback()
+                raise
+            retry_count += 1
+
+    @classmethod
     def select(cls, clause = None):
         connection = con.connection
         cursor = connection.cursor()
@@ -30,12 +55,7 @@ class table(object):
         else:
             sql = "select * from \"{}\" where {};".format(cls.__name__, clause)
 
-        try:
-            cursor.execute(sql)
-            connection.commit()
-        except:
-            connection.rollback()
-            raise
+        cls._execute_sql(connection, cursor, sql)
 
         column_names = [column.name for column in cursor.description]
 
@@ -59,12 +79,7 @@ class table(object):
         else:
             sql = "select count(*) from \"{}\" where {};".format(cls.__name__, clause)
 
-        try:
-            cursor.execute(sql)
-            connection.commit()
-        except:
-            connection.rollback()
-            raise
+        cls._execute_sql(connection, cursor, sql)
 
         for row in cursor:
             return row[0]
@@ -78,12 +93,7 @@ class table(object):
         else:
             sql = "select * from \"{}\" where {} limit 1;".format(cls.__name__, clause)
 
-        try:
-            cursor.execute(sql)
-            connection.commit()
-        except:
-            connection.rollback()
-            raise
+        cls._execute_sql(connection, cursor, sql)
 
         column_names = [column.name for column in cursor.description]
 
@@ -107,12 +117,7 @@ class table(object):
         else:
             sql = "delete from \"{}\" where {};".format(cls.__name__, clause)
 
-        try:
-            cursor.execute(sql)
-            connection.commit()
-        except:
-            connection.rollback()
-            raise
+        cls._execute_sql(connection, cursor, sql)
 
     @classmethod
     def insert(cls, **kwargs):
@@ -136,12 +141,8 @@ class table(object):
         if cls._get_value_on_insert_columns_str:
             sql = "insert into \"{t}\" {c} values{v} returning {c2}".format(
                 t = cls.__name__, c = cols, v = vals_str, c2 = cls._get_value_on_insert_columns_str)
-            try:
-                cursor.execute(sql, vals)
-                connection.commit()
-            except:
-                connection.rollback()
-                raise
+
+            cls._execute_sql(connection, cursor, sql, vals)
 
             table._disable_insert = True
             for row in cursor:
@@ -152,12 +153,8 @@ class table(object):
         else:
             sql = "insert into \"{t}\" {c} values{v}".format(
                 t = cls.__name__, c = cols, v = vals_str)
-            try:
-                cursor.execute(sql, vals)
-                connection.commit()
-            except:
-                connection.rollback()
-                raise
+
+            cls._execute_sql(connection, cursor, sql, vals)
 
             table._disable_insert = True
             obj = cls(**kwargs)
@@ -180,12 +177,7 @@ class table(object):
         sql = "insert into \"{}\" ({}) values {}".format(
             cls.__name__, cols, aggregate_values)
 
-        try:
-            cursor.execute(sql)
-            connection.commit()
-        except:
-            connection.rollback()
-            raise
+        cls._execute_sql(connection, cursor, sql)
 
     @classmethod
     def update(cls, match_columns, match_column_values, **kwargs):
@@ -203,12 +195,8 @@ class table(object):
         match_column_str = " and ".join([c + '=%s' for c in match_columns])
         sql = "update \"{t}\" set {c} where {c2}".format(
             t = cls.__name__, c = update_column_str, c2 = match_column_str)
-        try:
-            cursor.execute(sql, vals)
-            connection.commit()
-        except:
-            connection.rollback()
-            raise
+
+        cls._execute_sql(connection, cursor, sql, vals)
 
 
     @classmethod

@@ -33,9 +33,9 @@ class table1(mro.table.table):
 table1._register()
 
 @pytest.fixture
-def connection(request):
+def connection_function(request):
     connection = con.connect()
-    request.addfinalizer(con.disconnect)
+    request.addfinalizer(mro.disconnect)
 
     cursor = connection.cursor()
 
@@ -48,13 +48,14 @@ def connection(request):
     cursor.execute("insert into table1 (column1, column2, column3) values (%s,%s,%s)", (2,'Hello World2!', 3))
     cursor.execute("insert into table2 values (%s,%s,%s)", ('Hello World3!', 4, 'Hello World4!'))
     connection.commit()
+    connection.close()
 
-    return connection
+    return lambda: con.connect()
 
 class TestTable(object):
 
-    def test_table_reflection(self, connection):
-        mro.load_database(connection)
+    def test_table_reflection(self, connection_function):
+        mro.load_database(connection_function)
 
         tables = mro.table1.select()
 
@@ -77,8 +78,8 @@ class TestTable(object):
         assert tables[0].column2 == 4
         assert tables[0].column3 == 'Hello World4!'
 
-    def test_table_select_filter(self, connection):
-        mro.load_database(connection)
+    def test_table_select_filter(self, connection_function):
+        mro.load_database(connection_function)
 
         tables = mro.table1.select('column1 = %d' % 2)
 
@@ -92,8 +93,8 @@ class TestTable(object):
 
         assert len(tables) == 0
 
-    def test_table_delete_filter(self, connection):
-        mro.load_database(connection)
+    def test_table_delete_filter(self, connection_function):
+        mro.load_database(connection_function)
 
         table_count = mro.table1.select_count()
         tables = mro.table1.select('column1 = %d' % 2)
@@ -108,8 +109,8 @@ class TestTable(object):
 
         assert table_count - 1 == mro.table1.select_count()
 
-    def test_create_object(self, connection):
-        mro.load_database(connection)
+    def test_create_object(self, connection_function):
+        mro.load_database(connection_function)
 
         table_count = mro.table1.select_count()
 
@@ -140,9 +141,9 @@ class TestTable(object):
         assert tables[4].column2 == 'Hi3!'
         assert tables[4].column3 == 78
 
-    def test_insert_check_default_values(self, connection):
+    def test_insert_check_default_values(self, connection_function):
 
-        mro.load_database(connection)
+        mro.load_database(connection_function)
 
         table_count = mro.table1.select_count()
 
@@ -174,8 +175,8 @@ class TestTable(object):
         assert isinstance(table.column4, str)
         assert table.column4 != None
 
-    def test_insert_many(self, connection):
-        mro.load_database(connection)
+    def test_insert_many(self, connection_function):
+        mro.load_database(connection_function)
 
         mro.table1.delete()
 
@@ -203,8 +204,8 @@ class TestTable(object):
         assert tables[2].column2 == 'Hi3!'
         assert tables[2].column3 == 21
 
-    def test_insert_with_only_primary_key_no_kwargs(self, connection):
-        mro.load_database(connection)
+    def test_insert_with_only_primary_key_no_kwargs(self, connection_function):
+        mro.load_database(connection_function)
 
         table_count = mro.table1()
 
