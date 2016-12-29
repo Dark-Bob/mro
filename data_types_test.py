@@ -24,6 +24,10 @@ def connection(request):
 
     con.drop_tables()
 
+    # TODO make custom types work
+    # cursor.execute("""
+    # create type call_outcome AS ENUM ('No Answer', 'Answer Machine', 'Hung Up', 'Busy', 'Sale');""")
+
     cursor.execute("""create table test_type (
     id serial primary key,
     "varchar" varchar(15), 
@@ -39,7 +43,8 @@ def connection(request):
     "text" text,
     "double" double precision,
     "real" real,
-    "uuid" uuid)""")
+    "uuid" uuid);""")
+    # "custom_enum" call_outcome);""")
     connection.commit()
     connection.close()
 
@@ -202,8 +207,18 @@ class TestDataTypes(object):
         obj.uuid = uuid.uuid4()
         assert obj.uuid == uuid.uuid4()
         with pytest.raises(TypeError) as excinfo:
-            obj.uuid = uuid.uuid4()
+            obj.uuid = 'fail'
         assert excinfo.value.args[0] == 'Value should be of type [uuid] not [{}]'.format(str.__name__)
+
+    @xfail
+    def test_custom_enum(self, connection):
+        obj = mro.test_type(varchar='init')
+
+        obj.custom_enum = 'Busy'
+        assert obj.custom_enum == 'Busy'
+        with pytest.raises(TypeError) as excinfo:
+            obj.custom_enum = 'Not Valid'
+        assert excinfo.value.args[0] == 'Value should be of type [custom_enum] not [{}]'.format(str.__name__)
 
 if __name__ == '__main__':
     pytest.main([__file__, '-rw'])

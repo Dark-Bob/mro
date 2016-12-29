@@ -185,7 +185,11 @@ class table(object):
         vals_str_list = ["%s"] * len(values[0])
         vals_str = "({})".format(", ".join(vals_str_list))
 
-        aggregate_values = ','.join(cursor.mogrify(vals_str, x).decode("utf-8")  for x in values)
+        # speed up of
+        # aggregate_values = ','.join(cursor.mogrify(vals_str, x).decode("utf-8")  for x in values)
+        aggregate_values = cursor.mogrify(
+            ','.join([vals_str for i in range(len(values))]),
+            [item for sublist in values for item in sublist]).decode("utf-8")
 
         sql = "insert into \"{}\" ({}) values {}".format(
             cls.__name__, cols, aggregate_values)
