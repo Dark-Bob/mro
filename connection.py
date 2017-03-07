@@ -4,7 +4,7 @@ import psycopg2
 
 global get_connection
 
-if True:
+if False:
     import my_connection
     get_connection = my_connection.get_connection()
 else:
