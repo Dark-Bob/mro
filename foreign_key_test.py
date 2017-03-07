@@ -95,6 +95,7 @@ class TestForeignKeys(object):
         assert table.name != None
         assert table.table2s != None
         assert len(table.table2s) > 1
+        assert table.table2s[0].name == 'table2_1_1'
 
         num_table2s = len(table.table2s)
         mro.table2(name = 'table2_added', table1_id = table.id)

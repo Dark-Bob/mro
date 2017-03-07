@@ -98,7 +98,7 @@ class foreign_key_reference_list(list):
         super().extend(self.referring_class.select(self.referring_column + '=' + str(getattr(self.target_instance, self.target_column))))
 
     def __getitem__(self, key):
-        return super().__getitem__(self, key)
+        return super().__getitem__(key)
 
     def __setitem__(self, key, item):
         raise PermissionError("Cannot set specific value on foreign key reference list.")
