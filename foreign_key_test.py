@@ -1,4 +1,5 @@
 ﻿import os
+import json
 import pytest
 import mro
 import mro.foreign_keys
@@ -7,7 +8,8 @@ import connection as con
 @pytest.fixture(scope="module")
 def connection(request):
     connection = con.connect()
-    request.addfinalizer(mro.disconnect)
+    if request:
+        request.addfinalizer(mro.disconnect)
 
     cursor = connection.cursor()
 
@@ -139,12 +141,35 @@ class TestForeignKeys(object):
         table1 = mro.table1.select_one()
         table2sCount = len(table1.table2s)
         table2 = mro.table2(name = 'table2_added2', table1_id = None)
+        table3 = mro.table2(name='table2_added3', table1_id=None)
         table2.table1_id = table1
+        table3.table1_id = table1.id
         assert table2.table1_id.value == table1.id
         assert table2sCount == len(table1.table2s)
         table1.table2s()
-        assert table2sCount + 1 == len(table1.table2s)
+        assert table2sCount + 2 == len(table1.table2s)
+
+    def test_foreign_keys_shortcuts(self, connection):
+        table1 = mro.table1.select_one()
+        table2sCount = len(table1.table2s)
+        table2 = mro.table2(name = 'table2_added2', table1_id = None)
+        table2.table1_id = table1
+        table3 = mro.table2(name='table2_added3', table1_id=table1.id)
+        assert table2.table1_id == table1.id
+        assert (table2.table1_id != table1.id) == False
+        assert table2.table1_id == table3.table1_id
+        assert table2sCount == len(table1.table2s)
+        table1.table2s()
+        assert table2sCount + 2 == len(table1.table2s)
+
+    def test_foreign_keys_to_json(self, connection):
+        table1 = mro.table1.select_one()
+        table2 = mro.table2(name='table2_added2', table1_id=table1.id)
+        serialised = json.dumps({"foreign_key": table2.table1_id})
+        assert serialised == '{"foreign_key": 1}'
 
 if __name__ == '__main__':
-    #pytest.main([__file__])
-    pytest.main([__file__ + '::TestForeignKeys::test_write_foreign_keys'])
+    pytest.main([__file__])
+    #pytest.main([__file__ + '::TestForeignKeys::test_foreign_keys_shortcuts'])
+    # t = TestForeignKeys()
+    # t.test_foreign_keys_to_json(connection(None))

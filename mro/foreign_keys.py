@@ -1,5 +1,6 @@
 ﻿
 import mro
+import json
 
 class foreign_key_data_type(object):
 
@@ -26,18 +27,30 @@ class foreign_key_data_type(object):
             instance.__dict__[self.name].value = value
 
     def _lazy_init(self, instance):
-        # lazy eval of reference class checked once per instance to get around class cretion order issues
+        # lazy eval of reference class checked once per instance to get around class creation order issues
         if isinstance(self.reference_class, str):
             self.reference_class = eval(self.reference_class)
         instance.__dict__[self.name] = foreign_key(instance, self.data_type, self.reference_class, self.reference_column_name)
+
+
+# Ensure foreign keys just get saved as the key value not the json object
+class foreign_key_json_encoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, foreign_key):
+            return obj.value
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+
+json._default_encoder = foreign_key_json_encoder()
+
 
 class foreign_key(object):
 
     def __init__(self, owner, data_type, reference_class, reference_column_name):
         self.__dict__['data_type'] = data_type
-        self.__dict__['reference_class']  = reference_class
-        self.__dict__['reference_column_name']  = reference_column_name
-        self.__dict__['owner']  = owner
+        self.__dict__['reference_class'] = reference_class
+        self.__dict__['reference_column_name'] = reference_column_name
+        self.__dict__['owner'] = owner
 
     def __getattr__(self, attribute):
         value = self.data_type.__get__(self.owner, int)
@@ -63,6 +76,20 @@ class foreign_key(object):
         else:
             raise AttributeError("Illegal attribute [{}] on this object.".format(attribute))
 
+    def __repr__(self):
+        value = self.data_type.__get__(self.owner, int)
+        return str(value)
+
+    def __eq__(self, other):
+        value = self.data_type.__get__(self.owner, int)
+        if type(other) is int:
+            return value == other
+        elif type(other) is foreign_key:
+            return value == other.data_type.__get__(other.owner, int)
+        else:
+            return False
+
+
 class foreign_key_reference(object):
 
     def __init__(self, target_column, referring_class, referring_column):
@@ -86,6 +113,7 @@ class foreign_key_reference(object):
 
     def __set__(self, instance, value):
         raise Exception('Cannot set foreign key reference list, perhaps you meant to append to or extend the list?')
+
 
 class foreign_key_reference_list(list):
 
