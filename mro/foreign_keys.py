@@ -80,6 +80,14 @@ class foreign_key(object):
         value = self.data_type.__get__(self.owner, int)
         return str(value)
 
+    def __index__(self):
+        value = self.data_type.__get__(self.owner, int)
+        return value
+
+    def __int__(self):
+        value = self.data_type.__get__(self.owner, int)
+        return value
+
     def __eq__(self, other):
         value = self.data_type.__get__(self.owner, int)
         if type(other) is int:
