@@ -226,10 +226,10 @@ class TestDataTypes(object):
 
         bytea = 'my byte array'.encode('utf-8')
         obj.bytea = bytea
-        assert obj.bytea == 'Busy'
+        assert obj.bytea == bytea
         with pytest.raises(TypeError) as excinfo:
             obj.bytea = 'Not Valid'
-        assert excinfo.value.args[0] == 'Value should be of type [bytea] not [{}]'.format(str.__name__)
+        assert excinfo.value.args[0] == 'Value should be of type [bytes] not [{}]'.format(str.__name__)
 
 if __name__ == '__main__':
     #pytest.main([__file__, '-rw'])

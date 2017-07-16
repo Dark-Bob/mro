@@ -165,11 +165,12 @@ class TestForeignKeys(object):
     def test_foreign_keys_to_json(self, connection):
         table1 = mro.table1.select_one()
         table2 = mro.table2(name='table2_added2', table1_id=table1.id)
-        serialised = json.dumps({"foreign_key": table2.table1_id})
-        assert serialised == '{"foreign_key": 1}'
+        table3 = mro.table2(name='table2_added3', table1_id=None)
+        serialised = json.dumps({"foreign_key": table2.table1_id, "foreign_key2": table3.table1_id})
+        assert serialised == '{"foreign_key": 1, "foreign_key2": null}' or serialised == '{"foreign_key2": null, "foreign_key": 1}'
 
 if __name__ == '__main__':
-    pytest.main([__file__])
+    #pytest.main([__file__])
     #pytest.main([__file__ + '::TestForeignKeys::test_foreign_keys_shortcuts'])
-    # t = TestForeignKeys()
-    # t.test_foreign_keys_to_json(connection(None))
+    t = TestForeignKeys()
+    t.test_foreign_keys_to_json(connection(None))
