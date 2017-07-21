@@ -105,3 +105,8 @@ class bytea(database_type):
 
     def __init__(self, name, column_index, **kwargs):
         super().__init__(name, bytes, column_index, **kwargs)
+
+class blob(database_type):
+
+    def __init__(self, name, column_index, **kwargs):
+        super().__init__(name, bytes, column_index, **kwargs)
