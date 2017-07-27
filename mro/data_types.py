@@ -100,3 +100,8 @@ class uuid(database_type):
 
     def __init__(self, name, column_index, **kwargs):
         super().__init__(name, _uuid.UUID, column_index, **kwargs)
+
+class bytea(database_type):
+
+    def __init__(self, name, column_index, **kwargs):
+        super().__init__(name, bytes, column_index, **kwargs)

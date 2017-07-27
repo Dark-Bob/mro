@@ -43,7 +43,8 @@ def connection(request):
     "text" text,
     "double" double precision,
     "real" real,
-    "uuid" uuid);""")
+    "uuid" uuid,
+    "bytea" bytea);""")
     # "custom_enum" call_outcome);""")
     connection.commit()
     connection.close()
@@ -220,6 +221,16 @@ class TestDataTypes(object):
             obj.custom_enum = 'Not Valid'
         assert excinfo.value.args[0] == 'Value should be of type [custom_enum] not [{}]'.format(str.__name__)
 
+    def test_bytea(self, connection):
+        obj = mro.test_type(varchar='init')
+
+        bytea = 'my byte array'.encode('utf-8')
+        obj.bytea = bytea
+        assert obj.bytea == bytea
+        with pytest.raises(TypeError) as excinfo:
+            obj.bytea = 'Not Valid'
+        assert excinfo.value.args[0] == 'Value should be of type [bytes] not [{}]'.format(str.__name__)
+
 if __name__ == '__main__':
-    pytest.main([__file__, '-rw'])
-    #pytest.main([__file__ + '::TestDataTypes::test_json'])
+    #pytest.main([__file__, '-rw'])
+    pytest.main([__file__ + '::TestDataTypes::test_bytea'])

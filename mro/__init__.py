@@ -62,6 +62,7 @@ def _load_standard_db(connection):
         'json': ['json', defaultColumnToDataType, default_transform],
         'jsonb': ['json', defaultColumnToDataType, default_transform],
         'uuid': ['uuid', defaultColumnToDataType, default_transform],
+        'bytea': ['bytea', defaultColumnToDataType, default_transform],
         }
 
     # Get tables
