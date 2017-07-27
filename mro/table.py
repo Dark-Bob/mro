@@ -5,8 +5,12 @@ import mro.foreign_keys
 import time
 import psycopg2
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
+
+# TODO replace with green thead friendly, thread local storage
+psycopg2_lock = threading.Lock()
 
 class table(object):
 
@@ -44,27 +48,28 @@ class table(object):
 
     @classmethod
     def _execute_sql(cls, sql, values=None, cursor=None):
-        if cursor is None:
-            cursor = cls._get_cursor()
-        retry_count = 0
-        retry = True
-        while retry:
-            try:
-                cursor.execute(sql, values)
-                con.connection.commit()
-                retry = False
-            except psycopg2.InterfaceError as e:
-                if retry_count == 3:
+        with psycopg2_lock:
+            if cursor is None:
+                cursor = cls._get_cursor()
+            retry_count = 0
+            retry = True
+            while retry:
+                try:
+                    cursor.execute(sql, values)
+                    con.connection.commit()
+                    retry = False
+                except psycopg2.InterfaceError as e:
+                    if retry_count == 3:
+                        raise
+                    logger.exception("Connection failure will attempt to reconnect [{}] {}".format(sql, values))
+                    time.sleep(retry_count * 1)
+                    con.reconnect()
+                    cursor = con.connection.cursor()
+                except Exception as e:
+                    logger.exception("Exception while executing sql [{}] {}".format(sql, values))
+                    con.connection.rollback()
                     raise
-                logger.exception("Connection failure will attempt to reconnect [{}] {}".format(sql, values))
-                time.sleep(retry_count * 1)
-                con.reconnect()
-                cursor = con.connection.cursor()
-            except Exception as e:
-                logger.exception("Exception while executing sql [{}] {}".format(sql, values))
-                con.connection.rollback()
-                raise
-            retry_count += 1
+                retry_count += 1
 
     @classmethod
     def select(cls, clause = None):

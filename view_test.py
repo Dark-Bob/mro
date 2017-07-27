@@ -45,7 +45,7 @@ def connection(request):
 
     connection.commit()
 
-    mro.load_database(connection)
+    mro.load_database(lambda: con.connect())
 
     create_test_data(connection)
 
