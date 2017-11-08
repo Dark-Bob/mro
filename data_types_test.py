@@ -4,8 +4,7 @@ import connection as con
 import psycopg2
 from datetime import datetime, date, time
 import uuid
-import pandas as pd
-from io import StringIO
+
 xfail = pytest.mark.xfail
 
 

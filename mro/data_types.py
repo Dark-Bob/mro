@@ -3,6 +3,7 @@ import psycopg2.extras
 import datetime
 import uuid as _uuid
 
+
 class database_type(object):
 
     def __init__(self, name, python_type, column_index, not_null, is_updatable, get_value_on_insert, is_primary_key):
