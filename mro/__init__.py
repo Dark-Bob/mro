@@ -34,7 +34,7 @@ def _load_standard_db(connection):
     # Create transform functions
     def default_transform(column_default, data_type):
         if column_default.endswith('::' + data_type):
-            column_default = column_default[:-(len(data_type)+2)]
+            column_default = '"""{}"""'.format(column_default[1:-(len(data_type)+3)])
         return column_default, False
 
     def integer_transform(column_default, data_type):

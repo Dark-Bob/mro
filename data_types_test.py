@@ -4,7 +4,10 @@ import connection as con
 import psycopg2
 from datetime import datetime, date, time
 import uuid
+import pandas as pd
+from io import StringIO
 xfail = pytest.mark.xfail
+
 
 class test_type(object):
 
@@ -14,6 +17,7 @@ class test_type(object):
     varchar_not_updateble = mro.data_types.varchar('varchar_not_updateble', 3, 15, not_null=False, is_updatable=False, get_value_on_insert=False, is_primary_key=False)
     integer = mro.data_types.integer('integer', 4, not_null=False, is_updatable=True, get_value_on_insert=False, is_primary_key=False)
     boolean = mro.data_types.boolean('boolean', 5, not_null=False, is_updatable=True, get_value_on_insert=False, is_primary_key=False)
+
 
 @pytest.fixture(scope="module")
 def connection(request):
@@ -40,7 +44,7 @@ def connection(request):
     "timestamp" timestamp,
     "json" json,
     "jsonb" jsonb,
-    "text" text,
+    "text" text default E'two\nlines',
     "double" double precision,
     "real" real,
     "uuid" uuid,
@@ -52,6 +56,7 @@ def connection(request):
     mro.load_database(lambda: con.connect())
 
     return connection
+
 
 class TestDataTypes(object):
 
@@ -94,8 +99,7 @@ class TestDataTypes(object):
     def test_not_null(self, connection):
         obj = mro.test_type(varchar = 'init')
 
-        obj.varchar = '1'
-        assert obj.varchar == '1'
+        assert obj.varchar_not_null == 'abc'
         with pytest.raises(ValueError) as excinfo:
             obj.varchar_not_null = None
         assert excinfo.value.args[0] == 'The value of [{}] cannot be null.'.format('varchar_not_null')
@@ -222,14 +226,15 @@ class TestDataTypes(object):
         assert excinfo.value.args[0] == 'Value should be of type [custom_enum] not [{}]'.format(str.__name__)
 
     def test_bytea(self, connection):
-        obj = mro.test_type(varchar='init')
-
         bytea = 'my byte array'.encode('utf-8')
+
+        obj = mro.test_type(bytea=bytea)
         obj.bytea = bytea
         assert obj.bytea == bytea
         with pytest.raises(TypeError) as excinfo:
             obj.bytea = 'Not Valid'
         assert excinfo.value.args[0] == 'Value should be of type [bytes] not [{}]'.format(str.__name__)
+
 
 if __name__ == '__main__':
     #pytest.main([__file__, '-rw'])
