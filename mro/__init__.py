@@ -9,7 +9,7 @@ def disconnect():
     mro.connection.disconnect()
 
 
-def load_database(connection_function):
+def load_database(connection_function, exclude_tables=[]):
 
     mro.connection.set_connection_function(connection_function)
     connection = mro.connection.connection
@@ -17,11 +17,11 @@ def load_database(connection_function):
     if connection.__class__.__module__ == 'sqlite3':
         tables = sqlite._load_sqllite_db(connection)
     else:
-        tables = _load_standard_db(connection)
+        tables = _load_standard_db(connection, exclude_tables)
 
     _create_classes(tables)
 
-def _load_standard_db(connection):
+def _load_standard_db(connection, exclude_tables=[]):
     
     # Create data type functions
     def defaultColumnToDataType(column, code_start, code_end):
@@ -71,6 +71,8 @@ def _load_standard_db(connection):
 
     for table in cursor:
         table_name = table[2]
+        if table_name in exclude_tables:
+            continue
 
         cursor2 = connection.cursor()
 
