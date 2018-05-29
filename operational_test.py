@@ -66,12 +66,20 @@ def create_test_data(connection):
 
 def test_execute_sql(connection):
 
-    mro.execute_sql('select * from table1')
+    cursor = mro.execute_sql('select * from table1')
+    row_count = 0
+    for row in cursor:
+        row_count += 1
+    assert row_count == 3
 
 
 def test_execute_sql_disconnected(connection):
     mro.disconnect()
-    mro.execute_sql('select * from table1')
+    cursor = mro.execute_sql('select * from table1')
+    row_count = 0
+    for row in cursor:
+        row_count += 1
+    assert row_count == 3
 
 
 if __name__ == '__main__':
