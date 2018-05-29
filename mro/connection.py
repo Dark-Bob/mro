@@ -12,9 +12,10 @@ def set_connection_function(_connection_function):
 
 def disconnect():
     global connection
-    if connection:
+    try:
         connection.close()
-    connection = None
+    except:
+        pass
 
 
 def reconnect():
