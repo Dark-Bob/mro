@@ -1,3 +1,4 @@
+import atexit
 
 connection = None
 connection_function = None
@@ -22,3 +23,6 @@ def reconnect():
     global connection
     global connection_function
     connection = connection_function()
+
+
+atexit.register(disconnect)
