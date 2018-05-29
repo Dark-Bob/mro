@@ -67,9 +67,13 @@ class table(object):
                     cursor = con.connection.cursor()
                 except Exception as e:
                     logger.exception("Exception while executing sql [{}] {}".format(sql, values))
-                    con.connection.rollback()
+                    try:
+                        con.connection.rollback()
+                    except psycopg2.InterfaceError as e:
+                        logger.exception("Connection failure on attempt to rollback [{}] {}".format(sql, values))
                     raise
                 retry_count += 1
+            return cursor
 
     @classmethod
     def select(cls, clause = None):

@@ -21,6 +21,11 @@ def load_database(connection_function, exclude_tables=[]):
 
     _create_classes(tables)
 
+
+def execute_sql(sql, values=None):
+    return mro.table.table._execute_sql(sql, values)
+
+
 def _load_standard_db(connection, exclude_tables=[]):
     
     # Create data type functions
@@ -170,6 +175,7 @@ def _load_standard_db(connection, exclude_tables=[]):
         tables[table_name] = col_data
 
     return tables   
+
 
 def _create_classes(tables):
     for table, columns in tables.items():
