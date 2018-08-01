@@ -1,2 +1,2 @@
-psycopg2
-pytest
+psycopg2==2.7.3.2
+pytest==3.1.3
