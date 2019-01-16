@@ -9,8 +9,9 @@ import threading
 
 logger = logging.getLogger(__name__)
 
-# TODO replace with green thead friendly, thread local storage
+# TODO replace with green thread friendly, thread local storage
 psycopg2_lock = threading.Lock()
+
 
 class table(object):
 
@@ -35,13 +36,13 @@ class table(object):
         while True:
             try:
                 return con.connection.cursor()
-            except psycopg2.InterfaceError as e:
+            except psycopg2.InterfaceError:
                 if retry_count == 3:
                     raise
                 logger.exception("Connection failure while getting cursor, will attempt to reconnect.")
                 time.sleep(retry_count * 1)
                 con.reconnect()
-            except Exception as e:
+            except Exception:
                 logger.exception("Exception while getting sql cursor.")
                 raise
             retry_count += 1
@@ -58,32 +59,31 @@ class table(object):
                     cursor.execute(sql, values)
                     con.connection.commit()
                     retry = False
-                except psycopg2.InterfaceError as e:
+                except psycopg2.InterfaceError:
                     if retry_count == 3:
                         raise
                     logger.exception("Connection failure will attempt to reconnect [{}] {}".format(sql, values))
                     time.sleep(retry_count * 1)
                     con.reconnect()
                     cursor = con.connection.cursor()
-                except Exception as e:
+                except Exception:
                     logger.exception("Exception while executing sql [{}] {}".format(sql, values))
                     try:
                         con.connection.rollback()
-                    except psycopg2.InterfaceError as e:
+                    except psycopg2.InterfaceError:
                         logger.exception("Connection failure on attempt to rollback [{}] {}".format(sql, values))
                     raise
                 retry_count += 1
             return cursor
 
     @classmethod
-    def select(cls, clause = None):
+    def _select(cls, clause=None, *format_args):
         cursor = cls._get_cursor()
         if clause is None:
             sql = "select * from \"{}\";".format(cls.__name__)
         else:
             sql = "select * from \"{}\" where {};".format(cls.__name__, clause)
-
-        cls._execute_sql(sql, cursor=cursor)
+        cls._execute_sql(sql, cursor=cursor, values=format_args)
 
         column_names = [column.name for column in cursor.description]
 
@@ -99,27 +99,44 @@ class table(object):
         return objs
 
     @classmethod
-    def select_count(cls, clause = None):
+    def select(cls, clause=None):
+        return cls._select(clause)
+
+    @classmethod
+    def select_with_user_input(cls, pyformat_clause, *format_args):
+        return cls._select(pyformat_clause, format_args)
+
+    @classmethod
+    def _select_count(cls, clause=None, *format_args):
         cursor = cls._get_cursor()
+
         if clause is None:
             sql = "select count(*) from \"{}\";".format(cls.__name__)
         else:
             sql = "select count(*) from \"{}\" where {};".format(cls.__name__, clause)
 
-        cls._execute_sql(sql, cursor=cursor)
+        cls._execute_sql(sql, cursor=cursor, values=format_args)
 
         for row in cursor:
             return row[0]
 
     @classmethod
-    def select_one(cls, clause = None):
+    def select_count(cls, clause=None):
+        return cls._select_count(clause)
+
+    @classmethod
+    def select_count_with_user_input(cls, clause, *format_args):
+        return cls._select_count(clause, format_args)
+
+    @classmethod
+    def _select_one(cls, clause=None, *format_args):
         cursor = cls._get_cursor()
         if clause is None:
             sql = "select * from \"{}\" limit 1;".format(cls.__name__)
         else:
             sql = "select * from \"{}\" where {} limit 1;".format(cls.__name__, clause)
 
-        cls._execute_sql(sql, cursor=cursor)
+        cls._execute_sql(sql, cursor=cursor, values=format_args)
 
         column_names = [column.name for column in cursor.description]
 
@@ -135,13 +152,29 @@ class table(object):
         return obj
 
     @classmethod
-    def delete(cls, clause = None):
+    def select_one(cls, clause=None):
+        return cls._select_one(clause)
+
+    @classmethod
+    def select_one_with_user_input(cls, clause, *format_args):
+        return cls._select_one(clause,format_args)
+
+    @classmethod
+    def _delete(cls, clause=None, *format_args):
         if clause is None:
             sql = "delete from \"{}\";".format(cls.__name__)
         else:
             sql = "delete from \"{}\" where {};".format(cls.__name__, clause)
 
-        cls._execute_sql(sql)
+        cls._execute_sql(sql, values=format_args)
+
+    @classmethod
+    def delete(cls, clause=None):
+        cls._delete(clause)
+
+    @classmethod
+    def delete_with_user_input(cls, clause=None, *format_args):
+        cls._delete(clause, format_args)
 
     @classmethod
     def insert(cls, **kwargs):
@@ -211,7 +244,7 @@ class table(object):
             return
 
         if not match_columns:
-            raise ValueError("Update needs columns to match to update, is your table missing a prmary key?")
+            raise ValueError("Update needs columns to match to update, is your table missing a primary key?")
 
         vals = list(kwargs.values()) + match_column_values
         update_column_str = ", ".join([c + '=%s' for c in kwargs.keys()])
@@ -220,7 +253,6 @@ class table(object):
             t = cls.__name__, c = update_column_str, c2 = match_column_str)
 
         cls._execute_sql(sql, vals)
-
 
     @classmethod
     def update_many(cls, match_columns, match_column_values, update_columns, update_column_values):
