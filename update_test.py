@@ -78,7 +78,7 @@ class TestUpdates(object):
         table = mro.table3(value='first')
         with pytest.raises(ValueError) as excinfo:
             table.value = 'second'
-        assert excinfo.value.args[0] == "Update needs columns to match to update, is your table missing a prmary key?"
+        assert excinfo.value.args[0] == "Update needs columns to match to update, is your table missing a primary key?"
 
     def test_update_multiple_values(self, connection):
 

@@ -19,9 +19,10 @@ If the package has been updated and you want to pull a newer version:
 pip install --upgrade --no-deps --force-reinstall git+git://github.com/Dark-Bob/mro.git
 ```
 
-### User Login Example 
+### Simple Select Example 
 
-They say a picture is worth a thousand words. Here's hoping a code example is worth a couple too. We're going to outline how to use **mro** for a login.
+They say a picture is worth a thousand words. Here's hoping a code example is worth a couple too. We're going to outline how to use **mro** to select
+some data from our database. 
 
 Below is a fairly simple user table defined in SQL. We assume that this has already been created in the database and populated with some data.
 
@@ -38,7 +39,33 @@ create index on user using hash (email);
 ```
 Notice we're able to do things like create a hashed index for faster lookups of users via email easily.
 
+
+```python
+import sys, psycopg2
+from datetime import datetime
+import mro
+
+# pass a function to create a connection to your postgres database
+# and load the database in mro before making any other mro calls
+mro.load_database(lambda: psycopg2.connect(database='circle_test', user='ubuntu'))
+# that's it all your tables in your database are now ready to be used as classes
+
+# Select a count of users that have logged in since yesterday, note that we are not passing user input in to the method,
+# and so we don't need to use the select_count_with_user_input as we don't need to protect against sql injection here.
+# For an example of sql injection safe methods see the below User Login example.
+user_login_count = mro.user.select_count("last_login > TIMESTAMP 'yesterday'")
+if user_login_count is None:
+    print("No users have logged in today...")
+else:
+    print("There have been {} user logins today.".format(user_login_count))
+```
+
+#### SQL Injection Protection
+###### User Login
+
 Next we're on to the python code using **mro** for a login.
+
+**N.B** When dealing with user input you should use these sql injection safe method calls 
 
 ```python
 import sys, psycopg2
@@ -57,7 +84,9 @@ password = sys.argv[1]
 # validate a user using mro
 # here we select one record where the field email matches the local variable
 # if there is a match user will be populated if not it will be None
-user = mro.user.select_one("email = " + email.lower())
+# This uses the user input method and a pyformat string, the parameters to the method,
+# should match the pyformat string.
+user = mro.user.select_one_with_user_input("email = %s", email.lower())
 if user is None:
     print("A user with that email does not exist in the database")
 else:
