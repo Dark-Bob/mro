@@ -50,9 +50,8 @@ import mro
 mro.load_database(lambda: psycopg2.connect(database='circle_test', user='ubuntu'))
 # that's it all your tables in your database are now ready to be used as classes
 
-# Select a count of users that have logged in since yesterday, note that we are not passing user input in to the method,
-# and so we don't need to use the select_count_with_user_input as we don't need to protect against sql injection here.
-# For an example of sql injection safe methods see the below User Login example.
+# Select a count of users that have logged in since yesterday, when dealing with user input
+# in your queries, please use the pyformat syntax as explained in the user login example below
 user_login_count = mro.user.select_count("last_login > TIMESTAMP 'yesterday'")
 if user_login_count is None:
     print("No users have logged in today...")
@@ -60,12 +59,12 @@ else:
     print("There have been {} user logins today.".format(user_login_count))
 ```
 
-#### SQL Injection Protection
+#### Queries with User Input
 ###### User Login
 
 Next we're on to the python code using **mro** for a login.
 
-**N.B** When dealing with user input you should use these sql injection safe method calls 
+**N.B** When dealing with user input you should use the pyformat syntax to pass in variables to your queries
 
 ```python
 import sys, psycopg2
@@ -84,9 +83,9 @@ password = sys.argv[1]
 # validate a user using mro
 # here we select one record where the field email matches the local variable
 # if there is a match user will be populated if not it will be None
-# This uses the user input method and a pyformat string, the parameters to the method,
+# This uses a pyformat string, the parameters to the method,
 # should match the pyformat string.
-user = mro.user.select_one_with_user_input("email = %s", email.lower())
+user = mro.user.select_one("email = %s", email.lower())
 if user is None:
     print("A user with that email does not exist in the database")
 else:
@@ -118,7 +117,6 @@ Some of the other ORM packages SqlAlchemy, SqlObject, etc. support reverse ORM t
 - So far it's only Postgres
 
 ### Todos
-- Make it SQL injection safe
 - Support multiple schemas
 - Support stored procs
 - Support views

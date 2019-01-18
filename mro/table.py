@@ -77,7 +77,8 @@ class table(object):
             return cursor
 
     @classmethod
-    def _select(cls, clause=None, *format_args):
+    def select(cls, clause=None, *format_args):
+        format_args = list(format_args)
         cursor = cls._get_cursor()
         if clause is None:
             sql = "select * from \"{}\";".format(cls.__name__)
@@ -99,15 +100,8 @@ class table(object):
         return objs
 
     @classmethod
-    def select(cls, clause=None):
-        return cls._select(clause)
-
-    @classmethod
-    def select_with_user_input(cls, pyformat_clause, *format_args):
-        return cls._select(pyformat_clause, format_args)
-
-    @classmethod
-    def _select_count(cls, clause=None, *format_args):
+    def select_count(cls, clause=None, *format_args):
+        format_args = list(format_args)
         cursor = cls._get_cursor()
 
         if clause is None:
@@ -121,15 +115,8 @@ class table(object):
             return row[0]
 
     @classmethod
-    def select_count(cls, clause=None):
-        return cls._select_count(clause)
-
-    @classmethod
-    def select_count_with_user_input(cls, clause, *format_args):
-        return cls._select_count(clause, format_args)
-
-    @classmethod
-    def _select_one(cls, clause=None, *format_args):
+    def select_one(cls, clause=None, *format_args):
+        format_args = list(format_args)
         cursor = cls._get_cursor()
         if clause is None:
             sql = "select * from \"{}\" limit 1;".format(cls.__name__)
@@ -152,29 +139,14 @@ class table(object):
         return obj
 
     @classmethod
-    def select_one(cls, clause=None):
-        return cls._select_one(clause)
-
-    @classmethod
-    def select_one_with_user_input(cls, clause, *format_args):
-        return cls._select_one(clause,format_args)
-
-    @classmethod
-    def _delete(cls, clause=None, *format_args):
+    def delete(cls, clause=None, *format_args):
+        format_args=list(format_args)
         if clause is None:
             sql = "delete from \"{}\";".format(cls.__name__)
         else:
             sql = "delete from \"{}\" where {};".format(cls.__name__, clause)
 
         cls._execute_sql(sql, values=format_args)
-
-    @classmethod
-    def delete(cls, clause=None):
-        cls._delete(clause)
-
-    @classmethod
-    def delete_with_user_input(cls, clause=None, *format_args):
-        cls._delete(clause, format_args)
 
     @classmethod
     def insert(cls, **kwargs):

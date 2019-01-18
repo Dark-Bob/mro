@@ -52,8 +52,8 @@ def connection_function(request):
 
     return lambda: con.connect()
 
-class TestTable(object):
 
+class TestTable(object):
     def test_table_reflection(self, connection_function):
         mro.load_database(connection_function)
 
@@ -93,52 +93,66 @@ class TestTable(object):
 
         assert len(tables) == 0
 
-    def test_table_select_with_user_input(self, connection_function):
+    def test_table_select(self, connection_function):
+        mro.load_database(connection_function)
+        assert len(mro.table1.select()) is 2
+        assert len(mro.table1.select("column1=1")) is 1
+
+    def test_table_select_pyformat_syntax(self, connection_function):
         mro.load_database(connection_function)
 
-        injection_string = "1; insert into table1(column1, column2, column3) values(3,'Hello World3!',4); select * from table1"
         initial_tables = mro.table1.select()
-        # Prove that there is an issue with using select
-        injected_tables = mro.table1.select("column1 = {}".format(injection_string))
-        assert len(injected_tables) == len(initial_tables) + 1
-
+        injection_string = "1; insert into table1(column1, column2, column3) values(3,'Hello World3!',4); select * from table1"
+        # Check we throw an exception if the input variable contains an injection string
         with pytest.raises(Exception):
-            mro.table1.select_with_user_input("column1 = %s;", injection_string)
+            mro.table1.select("column1 = %s;", injection_string)
 
-        # Check that since the initial injection we haven't been able to insert another row using the select with user input
+        # Check that since the attempted injection we haven't been able to insert another row using the select with user input
         current_tables = mro.table1.select()
-        assert len(current_tables) == len(injected_tables)
+        assert len(current_tables) == len(initial_tables)
 
-    def test_table_select_count_with_user_input(self, connection_function):
+        # Check the positive case, that we can select using pyformat syntax
+        assert len(mro.table1.select("column1 = %s", 1)) is 1
+
+    def test_table_select_count(self, connection_function):
+        mro.load_database(connection_function)
+        assert mro.table1.select_count() is 2
+        assert mro.table1.select_count("column1=1") is 1
+
+    def test_table_select_count_pyformat_syntax(self, connection_function):
         mro.load_database(connection_function)
         injection_string = "1; insert into table1(column1, column2, column3) values(3,'Hello World3!',4); select count(*) from table1"
         initial_table_count = mro.table1.select_count()
-        # Prove that there is an issue with using select_count
-        injected_table_count = mro.table1.select_count("column1 = {}".format(injection_string))
-        assert injected_table_count == initial_table_count + 1
 
         with pytest.raises(Exception):
-            mro.table1.select_count_with_user_input("column1 = %s;", injection_string)
+            mro.table1.select_count("column1 = %s;", injection_string)
 
-        # Check that since the initial injection we haven't been able to insert another row using the select count with user input
+        # Check that since the attempted injection we haven't been able to insert another row using the select count with user input
         current_table_count = mro.table1.select_count()
-        assert current_table_count == injected_table_count
+        assert current_table_count == initial_table_count
 
-    def test_table_select_one_with_user_input(self, connection_function):
+        # Check the positive case, that we can select count with pyformat syntax
+        assert mro.table1.select_count("column1 = %s", 1) is 1
+
+    def test_table_select_one(self, connection_function):
+        mro.load_database(connection_function)
+        assert mro.table1.select_one("column1 = 1").column1 is 1
+        assert mro.table2.select_one().column2 is 4
+
+    def test_table_select_one_pyformat_syntax(self, connection_function):
         mro.load_database(connection_function)
         injection_string = "1; insert into table1(column1, column2, column3) values(3,'Hello World3!',4); select * from table1"
         initial_table_count = mro.table1.select_count()
-        # Prove that there is an issue with using select_one
-        mro.table1.select_one("column1 = {}".format(injection_string))
-        injected_table_count = mro.table1.select_count()
-        assert injected_table_count == initial_table_count + 1
 
         with pytest.raises(Exception):
-            mro.table1.select_one_with_user_input("column1 = %s;", injection_string)
+            mro.table1.select_one("column1 = %s;", injection_string)
 
-        # Check that since the initial injection we haven't been able to insert another row using the select count with user input
+        # Check that since the attempted injection we haven't been able to insert another row using the select count with user input
         current_table_count = mro.table1.select_count()
-        assert current_table_count == injected_table_count
+        assert current_table_count == initial_table_count
+
+        # Check the positive case we can select one using this pyformat syntax
+        assert mro.table1.select_one("column1 = %s", 1).column1 is 1
 
     def test_table_delete_filter(self, connection_function):
         mro.load_database(connection_function)
@@ -156,20 +170,27 @@ class TestTable(object):
 
         assert table_count - 1 == mro.table1.select_count()
 
-    def test_table_delete_with_user_input(self, connection_function):
+    def test_table_delete(self, connection_function):
         mro.load_database(connection_function)
-        injection_string = "2; insert into table1(column1, column2, column3) values(3,'row in on delete',4);"
+        mro.table1.delete('column1 = 1')
+        assert mro.table1.select_count('column1 = 1') is 0
+        assert mro.table1.select_count() is not 0
+        mro.table1.delete()
+        assert mro.table1.select_count() is 0
 
-        assert len(mro.table1.select("column2 = 'row in on delete'")) is 0
+    def test_table_delete_pyformat_syntax(self, connection_function):
+        mro.load_database(connection_function)
+        assert mro.table1.select_count("column1=1") is not 0
 
-        # Prove normal delete is a problem
-        mro.table1.delete('column1 = {}'.format(injection_string))
-
-        assert len(mro.table1.select("column2 = 'row in on delete'")) is not 0
-        mro.table1.delete_with_user_input('column2 = %s', "'row in on delete'; insert into table1(column1,column2,column3) values(4, 'row2 in on delete', 6);")
+        mro.table1.delete('column2 = %s',
+                          "1; insert into table1(column1,column2,column3) values(4, 'row in on delete', 6);")
         # Check we didn't delete as the column didn't match the whole string, also check we didn't insert a new row into the table
-        assert len(mro.table1.select("column2 = 'row in on delete'")) is not 0
-        assert len(mro.table1.select("column2 = 'row2 in on delete'")) is 0
+        assert mro.table1.select_count("column1 = 1") is not 0
+        assert mro.table1.select_count("column2 = 'row in on delete'") is 0
+
+        # Check the positive case, we can delete using the pyformat syntax
+        mro.table1.delete("column1=%s",1)
+        assert mro.table1.select_count("column1=1") is 0
 
     def test_create_object(self, connection_function):
         mro.load_database(connection_function)
