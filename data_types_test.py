@@ -13,7 +13,7 @@ class test_type(object):
     varchar = mro.data_types.varchar('varchar', 0, 15, not_null=False, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
     varchar2 = mro.data_types.varchar('varchar2', 1, 20, not_null=False, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
     varchar_not_null = mro.data_types.varchar('varchar_not_null', 2, 15, not_null=True, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
-    varchar_not_updateble = mro.data_types.varchar('varchar_not_updateble', 3, 15, not_null=False, is_updateable=False, get_value_on_insert=False, is_primary_key=False)
+    varchar_not_updateable = mro.data_types.varchar('varchar_not_updateable', 3, 15, not_null=False, is_updateable=False, get_value_on_insert=False, is_primary_key=False)
     integer = mro.data_types.integer('integer', 4, not_null=False, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
     boolean = mro.data_types.boolean('boolean', 5, not_null=False, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
 
@@ -46,7 +46,8 @@ def connection(request):
     "double" double precision,
     "real" real,
     "uuid" uuid,
-    "bytea" bytea);""")
+    "bytea" bytea,
+    "oid" oid);""")
     # "custom_enum" call_outcome);""")
     connection.commit()
     connection.close()
@@ -110,8 +111,8 @@ class TestDataTypes(object):
         obj.varchar = '1'
         assert obj.varchar == '1'
         with pytest.raises(PermissionError) as excinfo:
-            obj.varchar_not_updateble = '2'
-        assert excinfo.value.args[0] == 'The value of [{}] is not updateable.'.format('varchar_not_updateble')
+            obj.varchar_not_updateable = '2'
+        assert excinfo.value.args[0] == 'The value of [{}] is not updateable.'.format('varchar_not_updateable')
 
     def test_integer(self, connection):
         obj = mro.test_type(varchar = 'init')
@@ -232,6 +233,15 @@ class TestDataTypes(object):
         with pytest.raises(TypeError) as excinfo:
             obj.bytea = 'Not Valid'
         assert excinfo.value.args[0] == 'Value should be of type [bytes] not [{}]'.format(str.__name__)
+
+    def test_oid(self, connection):
+        obj = mro.test_type(varchar='init')
+
+        obj.oid = 1000
+        assert obj.oid == 1000
+        with pytest.raises(TypeError) as excinfo:
+            obj.oid = 'randomstring'
+        assert excinfo.value.args[0] == 'Value should be of type [int] not [{}]'.format(str.__name__)
 
 
 if __name__ == '__main__':

@@ -59,6 +59,7 @@ type_map = {
     'jsonb': ['json', defaultColumnToDataType, default_transform],
     'uuid': ['uuid', defaultColumnToDataType, default_transform],
     'bytea': ['bytea', defaultColumnToDataType, default_transform],
+    'oid': ['oid', defaultColumnToDataType, integer_transform],
     }
 
 
@@ -184,3 +185,8 @@ class bytea(database_type):
 
     def __init__(self, name, column_index, **kwargs):
         super().__init__(name, bytes, column_index, **kwargs)
+
+class oid(database_type):
+
+    def __init__(self, name, column_index, **kwargs):
+        super().__init__(name, int, column_index, **kwargs)

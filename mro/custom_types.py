@@ -81,6 +81,7 @@ postgres_type_to_python_map = {
     'jsonb': str,
     'uuid': str,
     'bytea': str,
+    'oid': int
 }
 
 
