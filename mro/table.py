@@ -76,6 +76,12 @@ class table(object):
                 retry_count += 1
             return cursor
 
+    @staticmethod
+    def _convert_numpy_types_to_python(values):
+        for k, v in values.items():
+            values[k] = mro.data_types.convert_numpy_to_python(v)
+        return values
+
     @classmethod
     def select(cls, clause=None, *format_args):
         format_args = list(format_args)
@@ -161,6 +167,7 @@ class table(object):
             vals_str = ''
             vals = ()
         else:
+            kwargs = table._convert_numpy_types_to_python(kwargs)
             cols = '({})'.format(', '.join(list(keys)))
             vals = list(kwargs.values())
             vals_str_list = ["%s"] * len(vals)
