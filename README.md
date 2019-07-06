@@ -121,6 +121,28 @@ Some of the other ORM packages SqlAlchemy, SqlObject, etc. support reverse ORM t
 - Support stored procs
 - Support views
 
+### Setting up a database for testing
 
+This can be done simply using docker.
+
+```bash
+docker run -it -d -p 5432:5432 --name database postgres
+```
+
+The create a file in your root directory called my_connection with a function like below:
+
+```python
+import psycopg2
+
+
+def get_connection():
+    return psycopg2.connect(host='localhost', user='postgres')
+```
+
+After this has been setup after reboots the database can be started with.
+
+```bash
+docker start database
+```
 
 

@@ -4,6 +4,12 @@ import datetime
 import uuid as _uuid
 
 
+def convert_numpy_to_python(value):
+    if hasattr(value, 'dtype'):
+        value = value.item()
+    return value
+
+
 class database_type(object):
 
     def __init__(self, name, python_type, column_index, not_null, is_updatable, get_value_on_insert, is_primary_key):
@@ -23,6 +29,7 @@ class database_type(object):
         return None
 
     def __set__(self, instance, value):
+        value = convert_numpy_to_python(value)
         if not self.is_updatable:
             raise PermissionError('The value of [{}] is not updateable.'.format(self.name))
         if value is None:

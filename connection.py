@@ -1,12 +1,12 @@
 ﻿
-import sqlite3
+import os
 import psycopg2
 
 global get_connection
 
-if False:
+if os.path.isfile('my_connection.py'):
     import my_connection
-    get_connection = my_connection.get_connection()
+    get_connection = my_connection.get_connection
 else:
     get_connection = lambda: psycopg2.connect(database='circle_test', user='ubuntu')
 
