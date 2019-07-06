@@ -129,7 +129,7 @@ This can be done simply using docker.
 docker run -it -d -p 5432:5432 --name database postgres
 ```
 
-The create a file in your root directory called my_connection with a function like below:
+The create a file in your project root directory called my_connection with a function like below:
 
 ```python
 import psycopg2
