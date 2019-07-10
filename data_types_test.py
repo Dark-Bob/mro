@@ -10,12 +10,12 @@ xfail = pytest.mark.xfail
 
 class test_type(object):
 
-    varchar = mro.data_types.varchar('varchar', 0, 15, not_null=False, is_updatable=True, get_value_on_insert=False, is_primary_key=False)
-    varchar2 = mro.data_types.varchar('varchar2', 1, 20, not_null=False, is_updatable=True, get_value_on_insert=False, is_primary_key=False)
-    varchar_not_null = mro.data_types.varchar('varchar_not_null', 2, 15, not_null=True, is_updatable=True, get_value_on_insert=False, is_primary_key=False)
-    varchar_not_updateble = mro.data_types.varchar('varchar_not_updateble', 3, 15, not_null=False, is_updatable=False, get_value_on_insert=False, is_primary_key=False)
-    integer = mro.data_types.integer('integer', 4, not_null=False, is_updatable=True, get_value_on_insert=False, is_primary_key=False)
-    boolean = mro.data_types.boolean('boolean', 5, not_null=False, is_updatable=True, get_value_on_insert=False, is_primary_key=False)
+    varchar = mro.data_types.varchar('varchar', 0, 15, not_null=False, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
+    varchar2 = mro.data_types.varchar('varchar2', 1, 20, not_null=False, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
+    varchar_not_null = mro.data_types.varchar('varchar_not_null', 2, 15, not_null=True, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
+    varchar_not_updateble = mro.data_types.varchar('varchar_not_updateble', 3, 15, not_null=False, is_updateable=False, get_value_on_insert=False, is_primary_key=False)
+    integer = mro.data_types.integer('integer', 4, not_null=False, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
+    boolean = mro.data_types.boolean('boolean', 5, not_null=False, is_updateable=True, get_value_on_insert=False, is_primary_key=False)
 
 
 @pytest.fixture(scope="module")
@@ -26,10 +26,9 @@ def connection(request):
     cursor = connection.cursor()
 
     con.drop_tables()
-
-    # TODO make custom types work
-    # cursor.execute("""
-    # create type call_outcome AS ENUM ('No Answer', 'Answer Machine', 'Hung Up', 'Busy', 'Sale');""")
+    # TODO re-add once custom enum types are supported, currently only custom composite types are
+    # cursor.execute("""DROP TYPE IF EXISTS call_outcome""")
+    # cursor.execute("""CREATE TYPE call_outcome AS ENUM ('No Answer', 'Answer Machine', 'Hung Up', 'Busy', 'Sale')""")
 
     cursor.execute("""create table test_type (
     id serial primary key,

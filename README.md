@@ -99,6 +99,31 @@ else:
         # update last logged in time for this user in the database
         user.last_login = datetime.now()
 ```
+###### Tests
+- Create a venv and install the mro package requirements to this venv
+- To run the tests you will need to have a local postgres running, to do this run the following command:
+
+```bash
+docker run -it -d -p 5432:5432 --name database postgres
+```
+
+The create a file in your project root directory called my_connection with a function like below:
+
+```python
+import psycopg2
+
+
+def get_connection():
+    return psycopg2.connect(host='localhost', user='postgres')
+```
+
+After this has been setup after reboots the database can be started with.
+
+```bash
+docker start database
+```
+
+
 ###### Points to note:
 - More example usage can be found in the tests, if anything is still not very obvious please raise an issue and I'll create a tutorial
 - Looking at the last line of the example you may be worried that to update several columns you'd make a database call for each one but there is an update function that can be used as below with an arbitrary number of column names. There are similar calls for multiple row inserts, etc.
@@ -121,28 +146,5 @@ Some of the other ORM packages SqlAlchemy, SqlObject, etc. support reverse ORM t
 - Support stored procs
 - Support views
 
-### Setting up a database for testing
-
-This can be done simply using docker.
-
-```bash
-docker run -it -d -p 5432:5432 --name database postgres
-```
-
-The create a file in your project root directory called my_connection with a function like below:
-
-```python
-import psycopg2
-
-
-def get_connection():
-    return psycopg2.connect(host='localhost', user='postgres')
-```
-
-After this has been setup after reboots the database can be started with.
-
-```bash
-docker start database
-```
 
 

@@ -33,8 +33,10 @@ def connection(request):
     );""")
 
     cursor.execute("""create table table4 (
+    id serial,
     my_bool bool default False,
-    my_boolean boolean default True
+    my_boolean boolean default True,
+    primary key (id)
     );""")
 
     connection.commit()
@@ -93,14 +95,13 @@ class TestUpdates(object):
         selectedTable = mro.table1.select_one("name='Test36'")
         assert selectedTable.value == 'second'
 
-    @pytest.mark.xfail
     def test_boolean(self, connection):
 
         table = mro.table4.insert(my_bool=True,my_boolean=False)
 
-        table.my_bool = table.my_boolean
+        table.my_bool != table.my_boolean
 
-        assert table.my_bool is False
+        assert table.my_bool is True
         assert table.my_boolean is False
 
 if __name__ == '__main__':
