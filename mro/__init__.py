@@ -52,7 +52,7 @@ def _load_standard_db(connection):
         cursor2 = connection.cursor()
 
         # get foreign keys
-        cursor2.execute("""select  
+        cursor2.execute(f"""select  
             kcu1.column_name as fk_column_name
             ,kcu2.table_name as referenced_table_name 
             ,kcu2.column_name as referenced_column_name 
@@ -62,13 +62,13 @@ def _load_standard_db(connection):
             on kcu1.constraint_catalog = rc.constraint_catalog  
             and kcu1.constraint_schema = rc.constraint_schema 
             and kcu1.constraint_name = rc.constraint_name 
-            and kcu1.table_name = '{}'
+            and kcu1.table_name = '{table_name}'
 
         inner join information_schema.key_column_usage as kcu2 
             on kcu2.constraint_catalog = rc.unique_constraint_catalog  
             and kcu2.constraint_schema = rc.unique_constraint_schema 
             and kcu2.constraint_name = rc.unique_constraint_name 
-            and kcu2.ordinal_position = kcu1.ordinal_position;""".format(table_name))
+            and kcu2.ordinal_position = kcu1.ordinal_position;""")
         connection.commit()
 
         foreign_keys = {}
@@ -76,7 +76,7 @@ def _load_standard_db(connection):
             foreign_keys[foreign_key[0]] = (foreign_key[1], foreign_key[2])
 
         # get foreign keys
-        cursor2.execute("""select  
+        cursor2.execute(f"""select  
             kcu1.table_name as fk_table_name
             ,kcu1.column_name as fk_column_name
             ,kcu2.column_name as referenced_column_name 
@@ -92,7 +92,7 @@ def _load_standard_db(connection):
             and kcu2.constraint_schema = rc.unique_constraint_schema 
             and kcu2.constraint_name = rc.unique_constraint_name 
             and kcu2.ordinal_position = kcu1.ordinal_position
-            and kcu2.table_name = '{}';""".format(table_name))
+            and kcu2.table_name = '{table_name}';""")
         connection.commit()
 
         foreign_key_targets = []
@@ -100,14 +100,14 @@ def _load_standard_db(connection):
             foreign_key_targets.append((foreign_key[0], foreign_key[1], foreign_key[2]))
 
         # Get primary keys
-        cursor2.execute("""select column_name from information_schema.table_constraints tc
+        cursor2.execute(f"""select column_name from information_schema.table_constraints tc
             join information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
-            where constraint_type='PRIMARY KEY' and tc.table_name='{}'""".format(table_name))
+            where constraint_type='PRIMARY KEY' and tc.table_name='{table_name}'""")
         connection.commit()
         primary_key_columns = [row[0] for row in cursor2]
 
         # Get columns
-        cursor2.execute("select * from information_schema.columns where table_name='" + table_name + "';")
+        cursor2.execute(f"select * from information_schema.columns where table_name='{table_name}';")
         connection.commit()
 
         columns = []
@@ -118,7 +118,7 @@ def _load_standard_db(connection):
             if postgres_type == 'USER-DEFINED':
                 postgres_type = column[27]
                 data_type = mro.data_types.type_map[postgres_type]
-                col_data['custom_type'] = eval(f'mro.custom_types.{column[27]}')
+                col_data['custom_type'] = eval(f'mro.custom_types.{postgres_type}')
             else:
                 data_type = mro.data_types.type_map[postgres_type]
             column_index = column[4]-1
@@ -129,7 +129,7 @@ def _load_standard_db(connection):
             is_primary_key = column_name in primary_key_columns
 
             if column_default:
-                column_default, get_value_on_insert = data_type[2](column_default, column[7])
+                column_default, get_value_on_insert = data_type[2](column_default, postgres_type)
 
             col_data['data_type'] = data_type[0]
             col_data['column_name'] = column_name
@@ -168,7 +168,7 @@ def _create_classes(tables):
                             kwargs[column['column_name']] = custom_type(**kwarg_for_column)
                 for k, v in kwargs.items():
                     if not hasattr(self, k):
-                        raise ValueError("{} does not have an attribute {}".format(self.__class__.__name__, k))
+                        raise ValueError(f"{self.__class__.__name__} does not have an attribute {k}")
                     self.__dict__[k] = v
 
                 if not super(self.__class__, self)._disable_insert:
@@ -212,13 +212,22 @@ def _create_classes(tables):
             setattr(dynamic_table_class, column['column_name'], col_value)
             # Add foreign key attributes to the class
             if column.get('foreign_key') is not None:
-                setattr(dynamic_table_class, column['column_name'], mro.foreign_keys.foreign_key_data_type(column['column_name'], col_value, f'mro.{column["foreign_key"][0]}', column["foreign_key"][1]))
+                setattr(dynamic_table_class,
+                        column['column_name'],
+                        mro.foreign_keys.foreign_key_data_type(column['column_name'],
+                                                               col_value,
+                                                               f'mro.{column["foreign_key"][0]}',
+                                                               column["foreign_key"][1]))
 
         for foreign_key_target in foreign_key_targets:
             foreign_key_name = f"{foreign_key_target[0]}s"
             # if they happen to have a column the same name as the reference list don't add it
             if foreign_key_name not in [column['column_name'] for column in table_columns]:
-                setattr(dynamic_table_class, foreign_key_name, mro.foreign_keys.foreign_key_reference(foreign_key_target[2], f"mro.{foreign_key_target[0]}", foreign_key_target[1]))
+                setattr(dynamic_table_class,
+                        foreign_key_name,
+                        mro.foreign_keys.foreign_key_reference(foreign_key_target[2],
+                                                               f"mro.{foreign_key_target[0]}",
+                                                               foreign_key_target[1]))
 
         setattr(mro, dynamic_table_class.__name__, dynamic_table_class)
         dynamic_table_class._register()

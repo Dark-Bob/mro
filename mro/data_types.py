@@ -3,6 +3,7 @@ import psycopg2.extras
 import datetime
 import uuid as _uuid
 
+
 # Create data type functions
 def defaultColumnToDataType(column, code_start, code_end):
     return code_start + code_end
@@ -10,12 +11,13 @@ def defaultColumnToDataType(column, code_start, code_end):
 
 def varcharColumnToDataType(column, code_start, code_end):
     character_maximum_length = column[8]
-    return '{0}{1}, {2}'.format(code_start, character_maximum_length, code_end)
+    return f'{code_start}{character_maximum_length}, {code_end}'
+
 
 # Create transform functions
 def default_transform(column_default, data_type):
     if column_default.endswith('::' + data_type):
-        column_default = '{}'.format(column_default[1:-(len(data_type)+3)])
+        column_default = f'{column_default[1:-(len(data_type)+3)]}'
     return column_default, False
 
 
@@ -87,14 +89,14 @@ class database_type(object):
     def __set__(self, instance, value):
         value = convert_numpy_to_python(value)
         if not self.is_updateable:
-            raise PermissionError('The value of [{}] is not updateable.'.format(self.name))
+            raise PermissionError(f'The value of [{self.name}] is not updateable.')
         if value is None:
             if self.not_null:
-                raise ValueError('The value of [{}] cannot be null.'.format(self.name))
+                raise ValueError(f'The value of [{self.name}] cannot be null.')
         else:
             # may need to move out into derived class or ceate another layer for basic types
             if type(value) is not self.python_type:
-                raise TypeError('Value should be of type [{}] not [{}]'.format(self.python_type.__name__, value.__class__.__name__))
+                raise TypeError(f'Value should be of type [{self.python_type.__name__}] not [{value.__class__.__name__}]')
             self.validate_set(value)
         instance.__dict__[self.name] = value
         instance.update(**{self.name: value})
@@ -111,7 +113,7 @@ class varchar(database_type):
 
     def validate_set(self, value):
         if len(value) > self.length:
-            raise ValueError('Value length [{}] should not exceed [{}]'.format(len(value), self.length))
+            raise ValueError(f'Value length [{len(value)}] should not exceed [{self.length}]')
 
 
 class integer(database_type):
