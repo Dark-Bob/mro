@@ -1,23 +1,31 @@
-﻿
-import mro.connection
+﻿import mro.connection
 import mro.data_types
 import mro.table
 import mro.sqlite
+import mro.custom_types
 
 
 def disconnect():
     mro.connection.disconnect()
 
 
-def load_database(connection_function, exclude_tables=[]):
-
+def load_database(connection_function, hooks=None):
+    print("***********INITIALISING DATABASE************")
     mro.connection.set_connection_function(connection_function)
+    mro.connection.set_on_reconnect(init_db)
+    mro.connection.set_hooks(hooks)
     connection = mro.connection.connection
+    init_db(connection)
+    if hooks is not None:
+        for hook in hooks:
+            hook()
 
+
+def init_db(connection):
     if connection.__class__.__module__ == 'sqlite3':
         tables = sqlite._load_sqllite_db(connection)
     else:
-        tables = _load_standard_db(connection, exclude_tables)
+        tables = _load_standard_db(connection)
 
     _create_classes(tables)
 
@@ -26,49 +34,13 @@ def execute_sql(sql, values=None):
     return mro.table.table._execute_sql(sql, values)
 
 
-def _load_standard_db(connection, exclude_tables=[]):
-    
-    # Create data type functions
-    def defaultColumnToDataType(column, code_start, code_end):
-        return code_start + code_end
-
-    def varcharColumnToDataType(column, code_start, code_end):
-        character_maximum_length = column[8]
-        return '{0}{1}, {2}'.format(code_start, character_maximum_length, code_end)
-
-    # Create transform functions
-    def default_transform(column_default, data_type):
-        if column_default.endswith('::' + data_type):
-            column_default = '"""{}"""'.format(column_default[1:-(len(data_type)+3)])
-        return column_default, False
-
-    def integer_transform(column_default, data_type):
-        if column_default.endswith('::regclass)'):
-            return None, True
-        return column_default, False
-
-    def none_transform(column_default, data_type):
-        return None, True
-
+def _load_standard_db(connection):
     cursor = connection.cursor()
 
     tables = {}
-    type_map = {
-        'character varying': ['varchar', varcharColumnToDataType, default_transform],
-        'integer': ['integer', defaultColumnToDataType, integer_transform],
-        'timestamp without time zone': ['timestamp', defaultColumnToDataType, none_transform],
-        'time without time zone': ['time', defaultColumnToDataType, none_transform],
-        'date': ['date', defaultColumnToDataType, none_transform],
-        'boolean': ['boolean', defaultColumnToDataType, default_transform],
-        # TODO make work: 'bool': ['boolean', defaultColumnToDataType, default_transform],
-        'text': ['text', defaultColumnToDataType, default_transform],
-        'double precision': ['double', defaultColumnToDataType, default_transform],
-        'real': ['real', defaultColumnToDataType, default_transform],
-        'json': ['json', defaultColumnToDataType, default_transform],
-        'jsonb': ['json', defaultColumnToDataType, default_transform],
-        'uuid': ['uuid', defaultColumnToDataType, default_transform],
-        'bytea': ['bytea', defaultColumnToDataType, default_transform],
-        }
+
+    # Create any custom types
+    mro.custom_types.create_custom_types(connection)
 
     # Get tables
     cursor.execute("select * from information_schema.tables where table_schema='public';")
@@ -76,13 +48,11 @@ def _load_standard_db(connection, exclude_tables=[]):
 
     for table in cursor:
         table_name = table[2]
-        if table_name in exclude_tables:
-            continue
 
         cursor2 = connection.cursor()
 
         # get foreign keys
-        cursor2.execute("""select  
+        cursor2.execute(f"""select  
             kcu1.column_name as fk_column_name
             ,kcu2.table_name as referenced_table_name 
             ,kcu2.column_name as referenced_column_name 
@@ -92,13 +62,13 @@ def _load_standard_db(connection, exclude_tables=[]):
             on kcu1.constraint_catalog = rc.constraint_catalog  
             and kcu1.constraint_schema = rc.constraint_schema 
             and kcu1.constraint_name = rc.constraint_name 
-            and kcu1.table_name = '{}'
+            and kcu1.table_name = '{table_name}'
 
         inner join information_schema.key_column_usage as kcu2 
             on kcu2.constraint_catalog = rc.unique_constraint_catalog  
             and kcu2.constraint_schema = rc.unique_constraint_schema 
             and kcu2.constraint_name = rc.unique_constraint_name 
-            and kcu2.ordinal_position = kcu1.ordinal_position;""".format(table_name))
+            and kcu2.ordinal_position = kcu1.ordinal_position;""")
         connection.commit()
 
         foreign_keys = {}
@@ -106,7 +76,7 @@ def _load_standard_db(connection, exclude_tables=[]):
             foreign_keys[foreign_key[0]] = (foreign_key[1], foreign_key[2])
 
         # get foreign keys
-        cursor2.execute("""select  
+        cursor2.execute(f"""select  
             kcu1.table_name as fk_table_name
             ,kcu1.column_name as fk_column_name
             ,kcu2.column_name as referenced_column_name 
@@ -122,7 +92,7 @@ def _load_standard_db(connection, exclude_tables=[]):
             and kcu2.constraint_schema = rc.unique_constraint_schema 
             and kcu2.constraint_name = rc.unique_constraint_name 
             and kcu2.ordinal_position = kcu1.ordinal_position
-            and kcu2.table_name = '{}';""".format(table_name))
+            and kcu2.table_name = '{table_name}';""")
         connection.commit()
 
         foreign_key_targets = []
@@ -130,21 +100,27 @@ def _load_standard_db(connection, exclude_tables=[]):
             foreign_key_targets.append((foreign_key[0], foreign_key[1], foreign_key[2]))
 
         # Get primary keys
-        cursor2.execute("""select column_name from information_schema.table_constraints tc
+        cursor2.execute(f"""select column_name from information_schema.table_constraints tc
             join information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
-            where constraint_type='PRIMARY KEY' and tc.table_name='{}'""".format(table_name))
+            where constraint_type='PRIMARY KEY' and tc.table_name='{table_name}'""")
         connection.commit()
         primary_key_columns = [row[0] for row in cursor2]
 
         # Get columns
-        cursor2.execute("select * from information_schema.columns where table_name='" + table_name + "';")
+        cursor2.execute(f"select * from information_schema.columns where table_name='{table_name}';")
         connection.commit()
 
-        col_data = []
-
+        columns = []
         for column in cursor2:
+            col_data = {}
             column_name = column[3]
-            data_type = type_map[column[7]]
+            postgres_type = column[7]
+            if postgres_type == 'USER-DEFINED':
+                postgres_type = column[27]
+                data_type = mro.data_types.type_map[postgres_type]
+                col_data['custom_type'] = eval(f'mro.custom_types.{postgres_type}')
+            else:
+                data_type = mro.data_types.type_map[postgres_type]
             column_index = column[4]-1
             column_default = column[5]
             is_nullable = column[6] == 'YES'
@@ -153,61 +129,105 @@ def _load_standard_db(connection, exclude_tables=[]):
             is_primary_key = column_name in primary_key_columns
 
             if column_default:
-                column_default, get_value_on_insert = data_type[2](column_default, column[7])
+                column_default, get_value_on_insert = data_type[2](column_default, postgres_type)
 
-            code_start = 'data_types.{}("{}", {}, '.format(data_type[0], column_name, column_index)
-            code_end = 'not_null={0}, is_updatable={1}, get_value_on_insert={2}, is_primary_key={3})'.format(not is_nullable, is_updateable, get_value_on_insert, is_primary_key)
-
-            code = data_type[1](column, code_start, code_end)
+            col_data['data_type'] = data_type[0]
+            col_data['column_name'] = column_name
+            col_data['column_index'] = column_index
+            col_data['column_default'] = column_default
+            col_data['not_null'] = not is_nullable
+            col_data['is_updateable'] = is_updateable
+            col_data['get_value_on_insert'] = get_value_on_insert
+            col_data['is_primary_key'] = is_primary_key
+            col_data['length'] = column[8]
             if column_name in foreign_keys:
                 foreign_key = foreign_keys[column_name]
-                # passing class name as string for eval to get around creation order issues
-                code = 'mro.foreign_keys.foreign_key_data_type("{}", {}, "mro.{}", "{}")'.format(column_name, code, foreign_key[0], foreign_key[1])
-            col_data.append((code, column_name, column_default))            
+                col_data['foreign_key'] = foreign_key
 
-        for foreign_key_target in foreign_key_targets:
-            foreign_key_name = foreign_key_target[0] + 's'
-            # if they happen to have a column the same name as the refernece list don't add it
-            if foreign_key_name not in [c[1] for c in col_data]:
-                code = 'mro.foreign_keys.foreign_key_reference("{}", "mro.{}", "{}")'.format(foreign_key_target[2], foreign_key_target[0], foreign_key_target[1])
-                col_data.append((code, foreign_key_target[0] + 's', None))
+            columns.append(col_data)
+        tables[table_name] = {}
+        tables[table_name]['columns'] = columns
+        tables[table_name]['foreign_key_targets'] = foreign_key_targets
 
-        tables[table_name] = col_data
-
-    return tables   
+    return tables
 
 
 def _create_classes(tables):
-    for table, columns in tables.items():
-        code = 'class ' + table + '(mro.table.table):\n'
-        for column_data in columns:
-            code += '    ' + column_data[1] + '=' + column_data[0] + '\n'
-        code += """    def __init__(self, **kwargs):\n"""
-        for column_data in columns:
-            code += "        self.__dict__['" + column_data[1] + "'] = " + str(column_data[2]) + "\n"
-        code += """        for k, v in kwargs.items():
-            if not hasattr(self, k):
-                raise ValueError("{} does not have an attribute {}".format(self.__class__.__name__, k))
-            self.__dict__[k] = v
+    for table_name, table_data in tables.items():
+        table_columns = table_data['columns']
+        foreign_key_targets = table_data['foreign_key_targets']
 
-        if not super()._disable_insert:
-            obj = super().insert(**kwargs)
-            for c in """ + table + """._get_value_on_insert_columns:
-                self.__dict__[c] = obj.__dict__[c]
-            
-    def update(self, **kwargs):
-        primary_key_columns = """ + table + """._primary_key_columns
-        primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
+        def create_table_class(name, columns):
+            def init_function(self, **kwargs):
+                for column in columns:
+                    self.__dict__[column['column_name']] = column['column_default']
+                    custom_type = column.get('custom_type')
+                    kwarg_for_column = kwargs.get(column['column_name'])
+                    if kwarg_for_column is not None:
+                        if custom_type is not None and type(kwarg_for_column) is not custom_type:
+                            kwargs[column['column_name']] = custom_type(**kwarg_for_column)
+                for k, v in kwargs.items():
+                    if not hasattr(self, k):
+                        raise ValueError(f"{self.__class__.__name__} does not have an attribute {k}")
+                    self.__dict__[k] = v
 
-        super().update(primary_key_columns, primary_key_column_values, **kwargs)
+                if not super(self.__class__, self)._disable_insert:
+                    obj = super(self.__class__, self).insert(**kwargs)
+                    for c in self.__class__._get_value_on_insert_columns:
+                        self.__dict__[c] = obj.__dict__[c]
 
-        mro.table.table._disable_insert = True
-        for k, v in kwargs.items():
-            self.__dict__[k] = v
-        mro.table.table._disable_insert = False
+            def update_function(self, **kwargs):
+                primary_key_columns = self.__class__._primary_key_columns
+                primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
 
-        return self\n"""
-        code += "{}._register()".format(table)
-        exec(code)
-        generated_class = eval(table)
-        globals()[generated_class.__name__] = generated_class
+                super(self.__class__, self).update(primary_key_columns, primary_key_column_values, **kwargs)
+
+                mro.table.table._disable_insert = True
+                for k, v in kwargs.items():
+                    self.__dict__[k] = v
+                mro.table.table._disable_insert = False
+                return self
+
+            attrib_dict = {'__init__': init_function,
+                           'update': update_function}
+            table_class = type(name, (mro.table.table,), attrib_dict)
+            return table_class
+        dynamic_table_class = create_table_class(table_name, table_columns)
+
+        for column in table_columns:
+            kwargs = {"name": column['column_name'],
+                      "column_index": column['column_index'],
+                      "not_null": column['not_null'],
+                      "is_updateable": column['is_updateable'],
+                      "get_value_on_insert": column['get_value_on_insert'],
+                      "is_primary_key": column['is_primary_key']}
+            if column['data_type'] == 'varchar':
+                kwargs['length'] = column['length']
+            if column.get('custom_type') is not None:
+                kwargs['python_type'] = column['custom_type']
+
+            col_value = mro.data_types.__dict__[column['data_type']](**kwargs)
+
+            # Add attributes to class
+            setattr(dynamic_table_class, column['column_name'], col_value)
+            # Add foreign key attributes to the class
+            if column.get('foreign_key') is not None:
+                setattr(dynamic_table_class,
+                        column['column_name'],
+                        mro.foreign_keys.foreign_key_data_type(column['column_name'],
+                                                               col_value,
+                                                               f'mro.{column["foreign_key"][0]}',
+                                                               column["foreign_key"][1]))
+
+        for foreign_key_target in foreign_key_targets:
+            foreign_key_name = f"{foreign_key_target[0]}s"
+            # if they happen to have a column the same name as the reference list don't add it
+            if foreign_key_name not in [column['column_name'] for column in table_columns]:
+                setattr(dynamic_table_class,
+                        foreign_key_name,
+                        mro.foreign_keys.foreign_key_reference(foreign_key_target[2],
+                                                               f"mro.{foreign_key_target[0]}",
+                                                               foreign_key_target[1]))
+
+        setattr(mro, dynamic_table_class.__name__, dynamic_table_class)
+        dynamic_table_class._register()

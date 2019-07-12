@@ -1,14 +1,13 @@
-﻿import os
-import pytest
+﻿import pytest
 import mro
 import connection as con
-from datetime import datetime, date, time
+from datetime import datetime, date
 
 class table1(mro.table.table):
 
-    column1 = mro.data_types.integer('column1', 0, not_null=False, is_updatable=True, get_value_on_insert = False, is_primary_key = False)
-    column2 = mro.data_types.varchar('column2', 1, 20, not_null=False, is_updatable=True, get_value_on_insert = False, is_primary_key = False)
-    column3 = mro.data_types.integer('column3', 1, not_null=False, is_updatable=True, get_value_on_insert = False, is_primary_key = False)
+    column1 = mro.data_types.integer('column1', 0, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key = False)
+    column2 = mro.data_types.varchar('column2', 1, 20, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key = False)
+    column3 = mro.data_types.integer('column3', 1, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key = False)
 
     def __init__(self, **kwargs):
         self.__dict__['column1'] = 1
@@ -16,7 +15,7 @@ class table1(mro.table.table):
         self.__dict__['column3'] = None
         for k, v in kwargs.items():
             if not hasattr(self, k):
-                raise ValueError("{} dos not have an attribute {}".format(self.__class__.__name__, k))
+                raise ValueError("{} does not have an attribute {}".format(self.__class__.__name__, k))
             self.__dict__[k] = v
 
         if not table1._disable_insert:
@@ -41,9 +40,9 @@ def connection_function(request):
 
     con.drop_tables()
 
-    cursor.execute("create table table1 (id serial primary key, created_date date not null default current_date, column1 integer default 1, column2 varchar(20), column3 integer)")
+    cursor.execute("create table table1 (id serial primary key, created_date date not null default current_date, column1 integer default 1, column2 varchar(20), column3 integer, column4 float default 1.2, column5 bool default False)")
     cursor.execute("create table table2 (column1 varchar(20), column2 integer, column3 varchar(20))")
-    cursor.execute("create table table3 (created_datetime timestamp not null default current_timestamp, created_time time not null default current_time, column1 varchar(20) default 'ABC DEF', column2 integer, column3 varchar(20), column4 jsonb)")
+    cursor.execute("create table table3 (created_datetime timestamp not null default current_timestamp, created_time time not null default current_time, column1 varchar(20) default 'ABC DEF', column2 integer, column3 varchar(20), column4 jsonb, column5 bool)")
     cursor.execute("insert into table1 (column1, column2, column3) values (%s,%s,%s)", (1,'Hello World!', 2))
     cursor.execute("insert into table1 (column1, column2, column3) values (%s,%s,%s)", (2,'Hello World2!', 3))
     cursor.execute("insert into table2 values (%s,%s,%s)", ('Hello World3!', 4, 'Hello World4!'))
@@ -231,8 +230,10 @@ class TestTable(object):
         table_count = mro.table1.select_count()
 
         table = mro.table1(column1 = 3, column2 = 'Hi!')
+        assert table.column5 == False
 
-        table = mro.table1(column1 = 3, column2 = 'Hi!', column3 = 11, created_date = datetime.now().date())
+        table = mro.table1(column1 = 3, column2 = 'Hi!', column3 = 11, column4=5.7, column5=True, created_date = datetime.now().date())
+        assert table.column5 == True
 
         tables = mro.table1.select()
 
@@ -246,6 +247,7 @@ class TestTable(object):
             assert isinstance(table.column2, str)
             assert table.column2 != None
             assert table.column3 == None or isinstance(table.column3, int)
+            assert isinstance(table.column5, bool)
 
         table = mro.table3(column3 = 'Hi56!', column4 = '{"data": 1}')
 
@@ -257,6 +259,7 @@ class TestTable(object):
         assert table.column3 != None
         assert isinstance(table.column4, str)
         assert table.column4 != None
+        assert table.column5 == None
 
     def test_insert_many(self, connection_function):
         mro.load_database(connection_function)

@@ -229,7 +229,7 @@ class table(object):
         update_column_str = ", ".join([c + '=%s' for c in kwargs.keys()])
         match_column_str = " and ".join([c + '=%s' for c in match_columns])
         sql = "update \"{t}\" set {c} where {c2}".format(
-            t = cls.__name__, c = update_column_str, c2 = match_column_str)
+            t = cls.__name__, c=update_column_str, c2=match_column_str)
 
         cls._execute_sql(sql, vals)
 

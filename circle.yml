@@ -8,31 +8,25 @@ jobs:
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
       DISTUTILS_DEBUG: 1
     docker:
-    - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
-      command: /sbin/init
+    - image: circleci/python:3.6.7
+      environment:
+        PGHOST: localhost
+        PGUSER: ubuntu
+    - image: circleci/postgres:9.6
+      environment:
+        POSTGRES_USER: ubuntu
+        POSTGRES_DB: circle_test
     steps:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
     - run:
-        name: Update APT
-        command: sudo apt-get update
-    - run:
-        name: Install python3
-        command: sudo apt-get install python3 --fix-missing
-    - run:
-        name: Install python3-pip
-        command: sudo apt install python3-pip --fix-missing
-    - run:
         name: Check python3 version
         command: python3 --version
     - run:
-        name: Get python3 venv
-        command: sudo apt-get install python3.4-venv
-    - run:
         name: Create venv
         command: |
-          python3 -m venv ~/venv
-          . ~/venv/bin/activate
+          python3 -m venv ./test-venv
+          source ./test-venv/bin/activate
           pip install -U pip
           pip install -U wheel
           pip install -r requirements.txt
@@ -40,7 +34,7 @@ jobs:
     - run:
         name: Run Tests
         command: |
-          . ~/venv/bin/activate
+          source ./test-venv/bin/activate
           py.test
     # Save test results
     - store_test_results:
