@@ -8,6 +8,7 @@ from operator import attrgetter
 def _get_custom_type_names(connection):
     cursor = connection.cursor()
     # Get custom types
+    # 'lo' is a type that comes from the lo extension
     cursor.execute("""SELECT t.typname as type
                                 FROM pg_type t
                                 LEFT JOIN pg_catalog.pg_namespace n
@@ -34,6 +35,7 @@ def _get_custom_type_names(connection):
                                       'pg_catalog',
                                       'information_schema'
                                 )
+                                AND t.typname != 'lo'
                         """)
     connection.commit()
     types = [t for t in cursor]
