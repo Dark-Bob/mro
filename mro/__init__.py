@@ -35,64 +35,68 @@ def execute_sql(sql, values=None):
 
 
 def _load_standard_db(connection):
+    print('Loading standard db')
     cursor = connection.cursor()
 
     tables = {}
 
     # Create any custom types
+    print('Creating custom types')
     mro.custom_types.create_custom_types(connection)
 
     # Get tables
+    print('Getting tables')
     cursor.execute("select * from information_schema.tables where table_schema='public';")
     connection.commit()
 
     for table in cursor:
         table_name = table[2]
+        print(f'Getting info about table [{table_name}]')
 
         cursor2 = connection.cursor()
 
-        # get foreign keys
-        cursor2.execute(f"""select  
-            kcu1.column_name as fk_column_name
-            ,kcu2.table_name as referenced_table_name 
-            ,kcu2.column_name as referenced_column_name 
-        from information_schema.referential_constraints as rc 
-
-        inner join information_schema.key_column_usage as kcu1 
-            on kcu1.constraint_catalog = rc.constraint_catalog  
-            and kcu1.constraint_schema = rc.constraint_schema 
-            and kcu1.constraint_name = rc.constraint_name 
-            and kcu1.table_name = '{table_name}'
-
-        inner join information_schema.key_column_usage as kcu2 
-            on kcu2.constraint_catalog = rc.unique_constraint_catalog  
-            and kcu2.constraint_schema = rc.unique_constraint_schema 
-            and kcu2.constraint_name = rc.unique_constraint_name 
-            and kcu2.ordinal_position = kcu1.ordinal_position;""")
+        # Get foreign keys (part 1)
+        # https://dba.stackexchange.com/a/218969
+        cursor2.execute(f"""
+            select 
+                 col.attname as fk_column_name
+                ,ftbl.relname as referenced_table_name
+                ,fcol.attname as referenced_column_name
+            from pg_catalog.pg_constraint con
+            join lateral unnest(con.conkey) with ordinality as u(attnum, attposition) on true
+            join pg_class tbl on tbl.oid = con.conrelid
+            join pg_attribute col on (col.attrelid = tbl.oid and col.attnum = u.attnum)
+            join lateral unnest(con.confkey) with ordinality as fu(attnum, attposition) on true
+            join pg_class ftbl on ftbl.oid = con.confrelid
+            join pg_attribute fcol on (fcol.attrelid = ftbl.oid and fcol.attnum = fu.attnum)
+            where 
+                    con.conrelid = '{table_name}'::regclass 
+                and con.contype = 'f';
+        """)
         connection.commit()
 
         foreign_keys = {}
         for foreign_key in cursor2:
             foreign_keys[foreign_key[0]] = (foreign_key[1], foreign_key[2])
 
-        # get foreign keys
-        cursor2.execute(f"""select  
-            kcu1.table_name as fk_table_name
-            ,kcu1.column_name as fk_column_name
-            ,kcu2.column_name as referenced_column_name 
-        from information_schema.referential_constraints as rc 
-
-        inner join information_schema.key_column_usage as kcu1 
-            on kcu1.constraint_catalog = rc.constraint_catalog  
-            and kcu1.constraint_schema = rc.constraint_schema 
-            and kcu1.constraint_name = rc.constraint_name
-
-        inner join information_schema.key_column_usage as kcu2 
-            on kcu2.constraint_catalog = rc.unique_constraint_catalog  
-            and kcu2.constraint_schema = rc.unique_constraint_schema 
-            and kcu2.constraint_name = rc.unique_constraint_name 
-            and kcu2.ordinal_position = kcu1.ordinal_position
-            and kcu2.table_name = '{table_name}';""")
+        # Get foreign keys (part 2)
+        # https://dba.stackexchange.com/a/218969
+        cursor2.execute(f"""
+            select 
+                 tbl.relname
+                ,col.attname
+                ,fcol.attname
+            from pg_catalog.pg_constraint con
+            join lateral unnest(con.conkey) with ordinality as u(attnum, attposition) on true
+            join pg_class tbl on tbl.oid = con.conrelid
+            join pg_attribute col on (col.attrelid = tbl.oid and col.attnum = u.attnum)
+            join lateral unnest(con.confkey) with ordinality as fu(attnum, attposition) on true
+            join pg_class ftbl on ftbl.oid = con.confrelid
+            join pg_attribute fcol on (fcol.attrelid = ftbl.oid and fcol.attnum = fu.attnum)
+            where 
+                    con.confrelid = '{table_name}'::regclass 
+                and con.contype = 'f';        
+        """)
         connection.commit()
 
         foreign_key_targets = []
@@ -100,31 +104,51 @@ def _load_standard_db(connection):
             foreign_key_targets.append((foreign_key[0], foreign_key[1], foreign_key[2]))
 
         # Get primary keys
-        cursor2.execute(f"""select column_name from information_schema.table_constraints tc
-            join information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
-            where constraint_type='PRIMARY KEY' and tc.table_name='{table_name}'""")
+        # https://wiki.postgresql.org/wiki/Retrieve_primary_key_columns
+        cursor2.execute(f"""
+            select
+                a.attname
+            from pg_index i
+            join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
+            where  
+                    i.indrelid = '{table_name}'::regclass
+                and i.indisprimary;        
+        """)
         connection.commit()
         primary_key_columns = [row[0] for row in cursor2]
 
         # Get columns
-        cursor2.execute(f"select * from information_schema.columns where table_name='{table_name}';")
+        cursor2.execute(f"""
+            select
+                 column_name
+                ,data_type
+                ,udt_name
+                ,ordinal_position
+                ,column_default
+                ,is_nullable
+                ,is_updatable
+                ,character_maximum_length
+            from information_schema.columns 
+            where 
+                    table_name='{table_name}';
+            """)
         connection.commit()
 
         columns = []
         for column in cursor2:
             col_data = {}
-            column_name = column[3]
-            postgres_type = column[7]
+            column_name = column[0]
+            postgres_type = column[1]
             if postgres_type == 'USER-DEFINED':
-                postgres_type = column[27]
+                postgres_type = column[2]
                 data_type = mro.data_types.type_map[postgres_type]
                 col_data['custom_type'] = eval(f'mro.custom_types.{postgres_type}')
             else:
                 data_type = mro.data_types.type_map[postgres_type]
-            column_index = column[4]-1
-            column_default = column[5]
-            is_nullable = column[6] == 'YES'
-            is_updateable = column[43] == 'YES'
+            column_index = column[3]-1
+            column_default = column[4]
+            is_nullable = column[5] == 'YES'
+            is_updateable = column[6] == 'YES'
             get_value_on_insert = False
             is_primary_key = column_name in primary_key_columns
 
@@ -139,7 +163,7 @@ def _load_standard_db(connection):
             col_data['is_updateable'] = is_updateable
             col_data['get_value_on_insert'] = get_value_on_insert
             col_data['is_primary_key'] = is_primary_key
-            col_data['length'] = column[8]
+            col_data['length'] = column[7]
             if column_name in foreign_keys:
                 foreign_key = foreign_keys[column_name]
                 col_data['foreign_key'] = foreign_key
