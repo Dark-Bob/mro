@@ -195,7 +195,7 @@ def _create_classes(tables):
                         raise ValueError(f"{self.__class__.__name__} does not have an attribute {k}")
                     self.__dict__[k] = v
 
-                if not super(self.__class__, self)._disable_insert:
+                if not super(self.__class__, self)._insert.disabled:
                     obj = super(self.__class__, self).insert(**kwargs)
                     for c in self.__class__._get_value_on_insert_columns:
                         self.__dict__[c] = obj.__dict__[c]
@@ -206,11 +206,10 @@ def _create_classes(tables):
 
                 super(self.__class__, self).update(primary_key_columns, primary_key_column_values, **kwargs)
 
-                mro.table.table._disable_insert = True
-                for k, v in kwargs.items():
-                    self.__dict__[k] = v
-                mro.table.table._disable_insert = False
-                return self
+                with mro.table.disable_insert():
+                    for k, v in kwargs.items():
+                        self.__dict__[k] = v
+                    return self
 
             attrib_dict = {'__init__': init_function,
                            'update': update_function}
