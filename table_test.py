@@ -2,6 +2,7 @@
 import mro
 import connection as con
 from datetime import datetime, date
+from threading import Thread, Event
 
 
 class table1(mro.table.table):
@@ -19,7 +20,7 @@ class table1(mro.table.table):
                 raise ValueError("{} does not have an attribute {}".format(self.__class__.__name__, k))
             self.__dict__[k] = v
 
-        if not table1._disable_insert:
+        if not mro.table.disable_insert():
             obj = super().insert(**kwargs)
             for c in table1._get_value_on_insert_columns:
                 self.__dict__[c] = obj.__dict__[c]
@@ -49,6 +50,28 @@ def connection_function(request):
     cursor.execute("insert into table1 (column1, column2, column3, column6) values (%s,%s,%s,%s)", (1,'Hello World!', 2, 777))
     cursor.execute("insert into table1 (column1, column2, column3) values (%s,%s,%s)", (2,'Hello World2!', 3))
     cursor.execute("insert into table2 values (%s,%s,%s)", ('Hello World3!', 4, 'Hello World4!'))
+    connection.commit()
+    connection.close()
+
+    return lambda: con.connect()
+
+
+@pytest.fixture
+def connection_function_for_threadsafe_test(request):
+    connection = con.connect()
+    request.addfinalizer(mro.disconnect)
+
+    cursor = connection.cursor()
+
+    con.drop_tables()
+
+    cursor.execute("create table table1 (id serial primary key, created_date date not null default current_date, column1 integer default 1, column2 varchar(20), column3 integer, column4 float default 1.2, column5 bool default False, column6 oid default 999)")
+    cursor.execute("create table table2 (id serial primary key, created_date date not null default current_date, column1 integer default 1, column2 varchar(20), column3 integer, column4 float default 1.2, column5 bool default False, column6 oid default 999)")
+
+    for i in range(3000):
+        cursor.execute("insert into table1 (column1, column2, column3, column6) values (%s,%s,%s,%s)", (i,'Hello World!', 2, 777))
+        cursor.execute("insert into table2 (column1, column2, column3, column6) values (%s,%s,%s,%s)", (i, 'Hello World!', 2, 777))
+
     connection.commit()
     connection.close()
 
@@ -289,7 +312,7 @@ class TestTable(object):
 
         tables = mro.table1.select()
 
-        assert 3 == len(tables)   
+        assert 3 == len(tables)
 
         assert tables[0].column1 == 1
         assert tables[0].column2 == 'Hi!'
@@ -307,6 +330,49 @@ class TestTable(object):
         mro.load_database(connection_function)
 
         table_count = mro.table1()
+
+    def test_disable_insert_thread_safe(self, connection_function_for_threadsafe_test):
+        mro.load_database(connection_function_for_threadsafe_test)
+
+        closedown_event = Event()
+
+        thread1 = Thread(target=simple_select, args=(mro.table1.select, "thread1", closedown_event))
+        thread1.start()
+
+        thread2 = Thread(target=simple_select, args=(mro.table2.select, "thread2", closedown_event))
+        thread2.start()
+
+        thread3 = Thread(target=simple_select, args=(mro.table1.select, "thread3", closedown_event))
+        thread3.start()
+
+        thread1.join()
+        thread2.join()
+        thread3.join()
+
+        successful = True
+        if closedown_event.wait(0):
+            successful = False
+
+        assert successful
+
+
+def simple_select(select_function, name, closedown_event):
+    count = 0
+    iterations = 10
+    log_every = 3
+    while count < iterations:
+        try:
+            if closedown_event.wait(0):
+                return
+            if count % log_every == 0:
+                print(f"{name} Iterated {count} times")
+            count = count + 1
+            tables = select_function()
+        except Exception as ex:
+            print(f"Exception in {name}: {str(ex)}")
+            closedown_event.set()
+            return
+
 
 if __name__ == '__main__':
     #pytest.main([__file__])

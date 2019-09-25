@@ -1,11 +1,14 @@
-﻿
+﻿from contextlib import contextmanager
+import logging
+import threading
+import time
+
+import psycopg2
+
 import mro.connection as con
 import mro.data_types
 import mro.foreign_keys
-import time
-import psycopg2
-import logging
-import threading
+
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +16,19 @@ logger = logging.getLogger(__name__)
 psycopg2_lock = threading.Lock()
 
 
-class table(object):
+@contextmanager
+def disable_insert():
+    table._insert.disabled = True
+    try:
+        yield
+    finally:
+        table._insert.disabled = False
 
-    _disable_insert =False
+
+class table(object):
+    # TODO Does this need to be switched to a green thread friendly local?
+    _insert = threading.local()
+    _insert.disabled = False
 
     @classmethod
     def _register(cls):
@@ -94,15 +107,13 @@ class table(object):
 
         column_names = [column.name for column in cursor.description]
 
-        table._disable_insert =True
-        objs = []
-        for row in cursor:
-            kwargs = {}
-            for index in range(len(column_names)):
-                kwargs[column_names[index]] = row[index]
-            objs.append(cls(**kwargs))
-        table._disable_insert =False
-
+        with disable_insert():
+            objs = []
+            for row in cursor:
+                kwargs = {}
+                for index in range(len(column_names)):
+                    kwargs[column_names[index]] = row[index]
+                objs.append(cls(**kwargs))
         return objs
 
     @classmethod
@@ -134,19 +145,19 @@ class table(object):
         column_names = [column.name for column in cursor.description]
 
         obj = None
-        table._disable_insert =True
-        for row in cursor:
-            kwargs = {}
-            for index in range(len(column_names)):
-                kwargs[column_names[index]] = row[index]
-            obj = cls(**kwargs)
-        table._disable_insert =False
+
+        with disable_insert():
+            for row in cursor:
+                kwargs = {}
+                for index in range(len(column_names)):
+                    kwargs[column_names[index]] = row[index]
+                obj = cls(**kwargs)
 
         return obj
 
     @classmethod
     def delete(cls, clause=None, *format_args):
-        format_args=list(format_args)
+        format_args = list(format_args)
         if clause is None:
             sql = "delete from \"{}\";".format(cls.__name__)
         else:
@@ -156,11 +167,11 @@ class table(object):
 
     @classmethod
     def insert(cls, **kwargs):
-        if table._disable_insert:
+        if table._insert.disabled:
             return
 
         cursor = cls._get_cursor()
-        
+
         keys = kwargs.keys()
         if len(keys) == 0:
             cols = 'default'
@@ -175,25 +186,23 @@ class table(object):
 
         if cls._get_value_on_insert_columns_str:
             sql = "insert into \"{t}\" {c} values{v} returning {c2}".format(
-                t = cls.__name__, c = cols, v = vals_str, c2 = cls._get_value_on_insert_columns_str)
+                t=cls.__name__, c=cols, v=vals_str, c2=cls._get_value_on_insert_columns_str)
 
             cls._execute_sql(sql, vals, cursor=cursor)
 
-            table._disable_insert = True
-            for row in cursor:
-                for index in range(len(cls._get_value_on_insert_columns)):
-                    kwargs[cls._get_value_on_insert_columns[index]] = row[index]
-                obj = cls(**kwargs)
-            table._disable_insert = False
+            with disable_insert():
+                for row in cursor:
+                    for index in range(len(cls._get_value_on_insert_columns)):
+                        kwargs[cls._get_value_on_insert_columns[index]] = row[index]
+                    obj = cls(**kwargs)
         else:
             sql = "insert into \"{t}\" {c} values{v}".format(
-                t = cls.__name__, c = cols, v = vals_str)
+                t=cls.__name__, c=cols, v=vals_str)
 
             cls._execute_sql(sql, vals, cursor=cursor)
 
-            table._disable_insert = True
-            obj = cls(**kwargs)
-            table._disable_insert = False
+            with disable_insert():
+                obj = cls(**kwargs)
 
         return obj
 
@@ -219,7 +228,7 @@ class table(object):
 
     @classmethod
     def update(cls, match_columns, match_column_values, **kwargs):
-        if table._disable_insert:
+        if table._insert.disabled:
             return
 
         if not match_columns:
@@ -229,17 +238,17 @@ class table(object):
         update_column_str = ", ".join([c + '=%s' for c in kwargs.keys()])
         match_column_str = " and ".join([c + '=%s' for c in match_columns])
         sql = "update \"{t}\" set {c} where {c2}".format(
-            t = cls.__name__, c=update_column_str, c2=match_column_str)
+            t=cls.__name__, c=update_column_str, c2=match_column_str)
 
         cls._execute_sql(sql, vals)
 
     @classmethod
     def update_many(cls, match_columns, match_column_values, update_columns, update_column_values):
-        #update test as t set
+        # update test as t set
         #    column_a = c.column_a
-        #from (values
+        # from (values
         #    ('123', 1),
-        #    ('345', 2)  
-        #) as c(column_b, column_a) 
-        #where c.column_b = t.column_b;
+        #    ('345', 2)
+        # ) as c(column_b, column_a)
+        # where c.column_b = t.column_b;
         raise Exception('Not implemented')
