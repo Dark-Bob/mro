@@ -25,10 +25,12 @@ def disable_insert():
         table._insert.disabled = False
 
 
+class insert_local(threading.local):
+    disabled = False
+
+
 class table(object):
-    # TODO Does this need to be switched to a green thread friendly local?
-    _insert = threading.local()
-    _insert.disabled = False
+    _insert = insert_local()
 
     @classmethod
     def _register(cls):
