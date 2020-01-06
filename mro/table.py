@@ -4,6 +4,7 @@ import threading
 import time
 
 import psycopg2
+from tenacity import before_sleep_log, retry, stop_after_attempt, wait_random_exponential
 
 import mro.connection as con
 import mro.data_types
@@ -14,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 # TODO replace with green thread friendly, thread local storage
 psycopg2_lock = threading.Lock()
+
+
+MAX_ATTEMPTS = 3
 
 
 @contextmanager
@@ -52,7 +56,7 @@ class table(object):
             try:
                 return con.connection.cursor()
             except psycopg2.InterfaceError:
-                if retry_count == 3:
+                if retry_count == MAX_ATTEMPTS:
                     raise
                 logger.exception("Connection failure while getting cursor, will attempt to reconnect.")
                 time.sleep(retry_count * 1)
@@ -75,7 +79,7 @@ class table(object):
                     con.connection.commit()
                     retry = False
                 except psycopg2.InterfaceError:
-                    if retry_count == 3:
+                    if retry_count == MAX_ATTEMPTS:
                         raise
                     logger.exception("Connection failure will attempt to reconnect [{}] {}".format(sql, values))
                     time.sleep(retry_count * 1)
@@ -98,14 +102,15 @@ class table(object):
         return values
 
     @classmethod
+    @retry(wait=wait_random_exponential(), stop=stop_after_attempt(MAX_ATTEMPTS),
+           reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def select(cls, clause=None, *format_args):
         format_args = list(format_args)
-        cursor = cls._get_cursor()
         if clause is None:
             sql = "select * from \"{}\";".format(cls.__name__)
         else:
             sql = "select * from \"{}\" where {};".format(cls.__name__, clause)
-        cls._execute_sql(sql, cursor=cursor, values=format_args)
+        cursor = cls._execute_sql(sql, values=format_args)
 
         column_names = [column.name for column in cursor.description]
 
@@ -119,30 +124,32 @@ class table(object):
         return objs
 
     @classmethod
+    @retry(wait=wait_random_exponential(), stop=stop_after_attempt(MAX_ATTEMPTS),
+           reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def select_count(cls, clause=None, *format_args):
         format_args = list(format_args)
-        cursor = cls._get_cursor()
 
         if clause is None:
             sql = "select count(*) from \"{}\";".format(cls.__name__)
         else:
             sql = "select count(*) from \"{}\" where {};".format(cls.__name__, clause)
 
-        cls._execute_sql(sql, cursor=cursor, values=format_args)
+        cursor = cls._execute_sql(sql, values=format_args)
 
         for row in cursor:
             return row[0]
 
     @classmethod
+    @retry(wait=wait_random_exponential(), stop=stop_after_attempt(MAX_ATTEMPTS),
+           reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def select_one(cls, clause=None, *format_args):
         format_args = list(format_args)
-        cursor = cls._get_cursor()
         if clause is None:
             sql = "select * from \"{}\" limit 1;".format(cls.__name__)
         else:
             sql = "select * from \"{}\" where {} limit 1;".format(cls.__name__, clause)
 
-        cls._execute_sql(sql, cursor=cursor, values=format_args)
+        cursor = cls._execute_sql(sql, values=format_args)
 
         column_names = [column.name for column in cursor.description]
 
@@ -172,8 +179,6 @@ class table(object):
         if table._insert.disabled:
             return
 
-        cursor = cls._get_cursor()
-
         keys = kwargs.keys()
         if len(keys) == 0:
             cols = 'default'
@@ -190,7 +195,7 @@ class table(object):
             sql = "insert into \"{t}\" {c} values{v} returning {c2}".format(
                 t=cls.__name__, c=cols, v=vals_str, c2=cls._get_value_on_insert_columns_str)
 
-            cls._execute_sql(sql, vals, cursor=cursor)
+            cursor = cls._execute_sql(sql, vals)
 
             with disable_insert():
                 for row in cursor:
@@ -201,7 +206,7 @@ class table(object):
             sql = "insert into \"{t}\" {c} values{v}".format(
                 t=cls.__name__, c=cols, v=vals_str)
 
-            cls._execute_sql(sql, vals, cursor=cursor)
+            cls._execute_sql(sql, vals)
 
             with disable_insert():
                 obj = cls(**kwargs)
