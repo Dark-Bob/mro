@@ -12,10 +12,11 @@ jobs:
       environment:
         PGHOST: localhost
         PGUSER: ubuntu
-    - image: circleci/postgres:9.6
+    - image: postgres:13.1-alpine
       environment:
         POSTGRES_USER: ubuntu
         POSTGRES_DB: circle_test
+        POSTGRES_PASSWORD: secure_password
     steps:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS

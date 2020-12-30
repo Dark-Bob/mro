@@ -3,6 +3,7 @@ import mro.data_types
 import mro.table
 import mro.sqlite
 import mro.custom_types
+import mro.routine
 
 
 def disconnect():
@@ -28,6 +29,8 @@ def init_db(connection):
         tables = _load_standard_db(connection)
 
     _create_classes(tables)
+
+    mro.routine._create_routines(connection)
 
 
 def execute_sql(sql, values=None):
