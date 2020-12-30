@@ -9,7 +9,7 @@ if os.path.isfile('my_connection.py'):
     import my_connection
     get_connection = my_connection.get_connection
 else:
-    get_connection = lambda: psycopg2.connect(database='circle_test', user='ubuntu')
+    get_connection = lambda: psycopg2.connect(database='circle_test', user='ubuntu', password="secure_password")
 
 def connect():
     global connection

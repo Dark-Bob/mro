@@ -16,6 +16,7 @@ jobs:
       environment:
         POSTGRES_USER: ubuntu
         POSTGRES_DB: circle_test
+        POSTGRES_PASSWORD: secure_password
     steps:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
