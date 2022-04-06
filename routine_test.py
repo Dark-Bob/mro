@@ -59,12 +59,12 @@ class TestRoutines(object):
 
         assert t[0].column1 == 'default'
         assert t[0].column2 == 0
-        assert t[0].column3 == '{}'
+        assert t[0].column3 == {}
         assert t[0].column4 is True
 
         assert t[1].column1 == 'test'
         assert t[1].column2 == 2
-        assert t[1].column3 == '{"some": "thing"}'
+        assert t[1].column3 == {'some': 'thing'}
         assert t[1].column4 is False
 
     def test_returns_table(self, connection_function):
