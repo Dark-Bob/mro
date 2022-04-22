@@ -198,6 +198,8 @@ class json(database_type):
         elif type(value) in [MroList, MroDict]:
             # In this case they're already mro objects so we don't need to validate their json
             result_obj = value
+        elif type(value) in [dict, list]:
+            result_obj = parse_to_mro_objects(self, instance, value)
         else:
             # may need to move out into derived class or create another layer for basic types
             if type(value) is not self.python_type:
@@ -210,7 +212,7 @@ class json(database_type):
                 result_obj = parse_to_mro_objects(self, instance, value)
             except json_.decoder.JSONDecodeError as e:
                 raise ValueError(f"Invalid input syntax for type json, provided input: {value}")
-        # TODO: discuss this change with andy, it seems instance.update sets the instance.__dict__[self.name] so when
+        # It seems instance.update sets the instance.__dict__[self.name] so when
         # these lines are inverted the first line is essentially overwritten with the value as a string
         instance.update(**{self.name: mro_objects_to_json(result_obj)})
         instance.__dict__[self.name] = result_obj
