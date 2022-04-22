@@ -242,6 +242,12 @@ class TestDataTypes(object):
         obj = mro.test_type.select_one("varchar='delete_value'")
         assert obj.json[0] == {"key2": [5, 6, 7]}
 
+        obj.json = {"key3": 1}
+        assert obj.json == {"key3": 1}
+        assert obj.json.key3 == 1
+        obj = mro.test_type.select_one("varchar='delete_value'")
+        assert obj.json == {"key3": 1}
+
         # Test we can't set it to invalid json
         with pytest.raises(ValueError) as excinfo:
             obj.json = 'this is just text'
