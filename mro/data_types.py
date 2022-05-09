@@ -2,6 +2,7 @@
 import uuid as _uuid
 import json as json_
 import psycopg2.extras
+from mro.json_encoder import get_json_encoder_class
 from mro.mro_dict import MroDict
 from mro.mro_list import MroList
 from mro.helpers import parse_to_mro_objects, mro_objects_to_json
@@ -23,6 +24,8 @@ def default_convert(column, instance, data):
 
 
 def json_convert(column, instance, data):
+    if isinstance(data, str):
+        data = json_.loads(data, object_hook=get_json_encoder_class().ObjectHandler)
     return parse_to_mro_objects(column, instance, data)
 
 
@@ -172,9 +175,8 @@ class text(database_type):
     def __init__(self, name, column_index, **kwargs):
         super().__init__(name, str, column_index, **kwargs)
 
-psycopg2.extensions.register_adapter(dict, psycopg2.extras.Json)
-psycopg2.extensions.register_adapter(list, psycopg2.extras.Json)
-
+psycopg2.extras.register_default_json(loads=lambda x: x)
+psycopg2.extras.register_default_jsonb(loads=lambda x: x)
 
 class json(database_type):
 

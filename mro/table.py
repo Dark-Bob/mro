@@ -9,7 +9,9 @@ from tenacity import before_sleep_log, retry, stop_after_attempt, wait_random_ex
 import mro.connection as con
 import mro.data_types
 import mro.foreign_keys
-
+from mro.mro_dict import MroDict
+from mro.mro_list import MroList
+from mro.helpers import mro_objects_to_json
 
 logger = logging.getLogger(__name__)
 
@@ -179,15 +181,18 @@ class table(object):
         if table._insert.disabled:
             return
 
-        keys = kwargs.keys()
+        keys = list(kwargs.keys())
         if len(keys) == 0:
             cols = 'default'
             vals_str = ''
             vals = ()
         else:
             kwargs = table._convert_numpy_types_to_python(kwargs)
-            cols = '({})'.format(', '.join(list(keys)))
+            cols = '({})'.format(', '.join(keys))
             vals = list(kwargs.values())
+            for i in range(len(vals)):
+                if isinstance(cls.__dict__[keys[i]], mro.data_types.json) and not isinstance(vals[i], str):
+                    vals[i] = mro_objects_to_json(vals[i])
             vals_str_list = ["%s"] * len(vals)
             vals_str = ' ({})'.format(', '.join(vals_str_list))
 
@@ -241,8 +246,14 @@ class table(object):
         if not match_columns:
             raise ValueError("Update needs columns to match to update, is your table missing a primary key?")
 
-        vals = list(kwargs.values()) + match_column_values
-        update_column_str = ", ".join([c + '=%s' for c in kwargs.keys()])
+        keys = list(kwargs.keys())
+        vals = list(kwargs.values())
+        for i in range(len(vals)):
+            if isinstance(cls.__dict__[list(keys)[i]], mro.data_types.json) and not isinstance(vals[i], str):
+                vals[i] = mro_objects_to_json(vals[i])
+
+        vals = vals + match_column_values
+        update_column_str = ", ".join([c + '=%s' for c in keys])
         match_column_str = " and ".join([c + '=%s' for c in match_columns])
         sql = "update \"{t}\" set {c} where {c2}".format(
             t=cls.__name__, c=update_column_str, c2=match_column_str)

@@ -3,7 +3,7 @@ import mro
 import connection as con
 from datetime import datetime, date
 from threading import Thread, Event
-
+from mro.mro_dict import MroDict
 
 class table1(mro.table.table):
 
@@ -292,7 +292,7 @@ class TestTable(object):
         assert table.column1 == 'ABC DEF'
         assert isinstance(table.column3, str)
         assert table.column3 is not None
-        assert isinstance(table.column4, dict)
+        assert isinstance(table.column4, MroDict)
         assert table.column4 is not None
         assert table.column5 is None
         assert table.column6 is None
