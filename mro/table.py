@@ -107,7 +107,8 @@ class table(object):
     @retry(wait=wait_random_exponential(), stop=stop_after_attempt(MAX_ATTEMPTS),
            reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def select(cls, clause=None, *format_args):
-        format_args = list(format_args)
+        format_args = [x if not isinstance(x, mro.foreign_keys.foreign_key) else x.value for x in format_args]
+
         if clause is None:
             sql = "select * from \"{}\";".format(cls.__name__)
         else:
@@ -129,7 +130,7 @@ class table(object):
     @retry(wait=wait_random_exponential(), stop=stop_after_attempt(MAX_ATTEMPTS),
            reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def select_count(cls, clause=None, *format_args):
-        format_args = list(format_args)
+        format_args = [x if not isinstance(x, mro.foreign_keys.foreign_key) else x.value for x in format_args]
 
         if clause is None:
             sql = "select count(*) from \"{}\";".format(cls.__name__)
@@ -145,7 +146,7 @@ class table(object):
     @retry(wait=wait_random_exponential(), stop=stop_after_attempt(MAX_ATTEMPTS),
            reraise=True, before_sleep=before_sleep_log(logger, logging.WARNING))
     def select_one(cls, clause=None, *format_args):
-        format_args = list(format_args)
+        format_args = [x if not isinstance(x, mro.foreign_keys.foreign_key) else x.value for x in format_args]
         if clause is None:
             sql = "select * from \"{}\" limit 1;".format(cls.__name__)
         else:
@@ -168,7 +169,7 @@ class table(object):
 
     @classmethod
     def delete(cls, clause=None, *format_args):
-        format_args = list(format_args)
+        format_args = [x if not isinstance(x, mro.foreign_keys.foreign_key) else x.value for x in format_args]
         if clause is None:
             sql = "delete from \"{}\";".format(cls.__name__)
         else:
@@ -189,7 +190,7 @@ class table(object):
         else:
             kwargs = table._convert_numpy_types_to_python(kwargs)
             cols = '({})'.format(', '.join(keys))
-            vals = list(kwargs.values())
+            vals = [x if not isinstance(x, mro.foreign_keys.foreign_key) else x.value for x in kwargs.values()]
             for i in range(len(vals)):
                 if isinstance(cls.__dict__[keys[i]], mro.data_types.json) and not isinstance(vals[i], str):
                     vals[i] = mro_objects_to_json(vals[i])
@@ -247,7 +248,7 @@ class table(object):
             raise ValueError("Update needs columns to match to update, is your table missing a primary key?")
 
         keys = list(kwargs.keys())
-        vals = list(kwargs.values())
+        vals = [x if not isinstance(x, mro.foreign_keys.foreign_key) else x.value for x in kwargs.values()]
         for i in range(len(vals)):
             if isinstance(cls.__dict__[list(keys)[i]], mro.data_types.json) and not isinstance(vals[i], str):
                 vals[i] = mro_objects_to_json(vals[i])
