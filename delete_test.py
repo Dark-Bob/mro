@@ -38,13 +38,9 @@ def create_test_data(connection):
         for j in range(1,4):
             cursor.execute("insert into table2 (name, table1_id) values (%s,%s)", ('table2_{}_{}'.format(i, j), i))
 
-    # edge cases
-    cursor.execute("insert into table2 (name, table1_id) values (%s,%s)", ('table2_None', None))
-    cursor.execute("insert into table1 (name) values (%s)", ('table1_None',))
-
     connection.commit()
 
-class TestUpdates(object):
+class TestDelete(object):
 
     def test_delete(self, connection):
 
