@@ -35,8 +35,6 @@ def create_test_data(connection):
     num_table1 = 2
     for i in range(1,num_table1+1):
         cursor.execute("insert into table1 (name) values (%s)", ('table1_{}'.format(i),))
-        for j in range(1,4):
-            cursor.execute("insert into table2 (name, table1_id) values (%s,%s)", ('table2_{}_{}'.format(i, j), i))
 
     connection.commit()
 
