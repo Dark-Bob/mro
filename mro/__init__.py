@@ -9,6 +9,7 @@ import mro.table
 import mro.sqlite
 import mro.custom_types
 import mro.routine
+import types
 
 
 def disconnect():
@@ -204,13 +205,14 @@ def _create_classes(tables):
                         if column['data_type'] in ["json", "jsonb"] and type(kwarg_for_column) == str:
                             kwarg_for_column = json.loads(kwarg_for_column)
                         column_metadata = self.__class__.__dict__[column['column_name']]
-                        kwargs[column['column_name']] = column['conversion_function'](column_metadata, self, kwarg_for_column)
+                        kwargs[column['column_name']] = column['conversion_function'](column_metadata, self,
+                                                                                      kwarg_for_column)
                 with mro.table.disable_insert():
                     for k, v in kwargs.items():
                         self.__dict__[k] = v
                     return self
 
-            def delete_function(self, *format_args):
+            def delete_function(self):
                 primary_key_columns = self.__class__._primary_key_columns
                 primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
                 clause = " and ".join([c + '=%s' for c in primary_key_columns])
@@ -242,8 +244,9 @@ def _create_classes(tables):
                         self.__dict__[c] = obj.__dict__[c]
 
                 # Overriding the table wide update and delete methods so we can continue to use table methods on class objects.
-                self.update = update_function
-                self.delete = delete_function
+                # The MethodType use makes sure the function gets the object instance as argument when called.
+                self.update = types.MethodType(update_function, self)
+                self.delete = types.MethodType(delete_function, self)
 
             attrib_dict = {'__init__': init_function}
             table_class = type(name, (mro.table.table,), attrib_dict)
