@@ -4,6 +4,7 @@ import mro.table
 import mro.sqlite
 import mro.custom_types
 import mro.routine
+import types
 
 
 def disconnect():
@@ -185,6 +186,23 @@ def _create_classes(tables):
         foreign_key_targets = table_data['foreign_key_targets']
 
         def create_table_class(name, columns):
+            def update_function(self, **kwargs):
+                primary_key_columns = self.__class__._primary_key_columns
+                primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
+
+                super(self.__class__, self).update(primary_key_columns, primary_key_column_values, **kwargs)
+
+                with mro.table.disable_insert():
+                    for k, v in kwargs.items():
+                        self.__dict__[k] = v
+                    return self
+
+            def delete_function(self):
+                primary_key_columns = self.__class__._primary_key_columns
+                primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
+                clause = " and ".join([c + '=%s' for c in primary_key_columns])
+                super(self.__class__, self).delete(clause, *primary_key_column_values)
+
             def init_function(self, **kwargs):
                 for column in columns:
                     self.__dict__[column['column_name']] = column['column_default']
@@ -203,21 +221,15 @@ def _create_classes(tables):
                     for c in self.__class__._get_value_on_insert_columns:
                         self.__dict__[c] = obj.__dict__[c]
 
-            def update_function(self, **kwargs):
-                primary_key_columns = self.__class__._primary_key_columns
-                primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
+                # Overriding the table wide update and delete methods so we can continue to use table methods on class objects.
+                # The MethodType use makes sure the function gets the object instance as argument when called.
+                self.update = types.MethodType(update_function, self)
+                self.delete = types.MethodType(delete_function, self)
 
-                super(self.__class__, self).update(primary_key_columns, primary_key_column_values, **kwargs)
-
-                with mro.table.disable_insert():
-                    for k, v in kwargs.items():
-                        self.__dict__[k] = v
-                    return self
-
-            attrib_dict = {'__init__': init_function,
-                           'update': update_function}
+            attrib_dict = {'__init__': init_function}
             table_class = type(name, (mro.table.table,), attrib_dict)
             return table_class
+
         dynamic_table_class = create_table_class(table_name, table_columns)
 
         for column in table_columns:
