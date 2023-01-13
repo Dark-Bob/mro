@@ -235,8 +235,15 @@ def _create_classes(tables):
                         self.__dict__[k] = v
                     return self
 
+            def delete_function(self):
+                primary_key_columns = self.__class__._primary_key_columns
+                primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
+                clause = " and ".join([c + '=%s' for c in primary_key_columns])
+                super(self.__class__, self).delete(clause, *primary_key_column_values)
+
             attrib_dict = {'__init__': init_function,
-                           'update': update_function}
+                           'update': update_function,
+                           'delete': delete_function}
             table_class = type(name, (mro.table.table,), attrib_dict)
             return table_class
         dynamic_table_class = create_table_class(table_name, table_columns)
