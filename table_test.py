@@ -7,9 +7,9 @@ from threading import Thread, Event
 
 class table1(mro.table.table):
 
-    column1 = mro.data_types.integer('column1', 0, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key=False, conversion_function=lambda x: x)
-    column2 = mro.data_types.varchar('column2', 1, 20, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key=False, conversion_function=lambda x: x)
-    column3 = mro.data_types.integer('column3', 1, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key=False, conversion_function=lambda x: x)
+    column1 = mro.data_types.integer('column1', 0, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key = False)
+    column2 = mro.data_types.varchar('column2', 1, 20, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key = False)
+    column3 = mro.data_types.integer('column3', 1, not_null=False, is_updateable=True, get_value_on_insert = False, is_primary_key = False)
 
     def __init__(self, **kwargs):
         self.__dict__['column1'] = 1
@@ -259,12 +259,12 @@ class TestTable(object):
 
         table_count = mro.table1.select_count()
 
-        table = mro.table1(column1=3, column2='Hi!')
+        table = mro.table1(column1 = 3, column2 = 'Hi!')
         assert table.column4 == 1.2
         assert table.column5 is False
         assert table.column6 == 999
 
-        table = mro.table1(column1=3, column2='Hi!', column3=11, column4=5.7, column5=True, created_date=datetime.now().date(), column6=88)
+        table = mro.table1(column1 = 3, column2 = 'Hi!', column3 = 11, column4=5.7, column5=True, created_date = datetime.now().date(), column6=88)
         assert table.column4 == 5.7
         assert table.column5 is True
         assert table.column6 == 88
@@ -284,7 +284,7 @@ class TestTable(object):
             assert isinstance(table.column5, bool)
             assert isinstance(table.column6, int)
 
-        table = mro.table3(column3='Hi56!', column4='{"data": 1}')
+        table = mro.table3(column3 = 'Hi56!', column4 = '{"data": 1}')
 
         table = mro.table3.select_one("column3 = 'Hi56!'")
 
@@ -292,7 +292,7 @@ class TestTable(object):
         assert table.column1 == 'ABC DEF'
         assert isinstance(table.column3, str)
         assert table.column3 is not None
-        assert isinstance(table.column4, dict)
+        assert isinstance(table.column4, str)
         assert table.column4 is not None
         assert table.column5 is None
         assert table.column6 is None

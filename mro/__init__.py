@@ -1,5 +1,4 @@
-﻿import json
-import mro.connection
+﻿import mro.connection
 import mro.data_types
 import mro.table
 import mro.sqlite
@@ -164,7 +163,6 @@ def _load_standard_db(connection):
             col_data['column_name'] = column_name
             col_data['column_index'] = column_index
             col_data['column_default'] = column_default
-            col_data['conversion_function'] = data_type[3]
             col_data['not_null'] = not is_nullable
             col_data['is_updateable'] = is_updateable
             col_data['get_value_on_insert'] = get_value_on_insert
@@ -193,14 +191,7 @@ def _create_classes(tables):
                 primary_key_column_values = [self.__dict__[c] for c in primary_key_columns]
 
                 super(self.__class__, self).update(primary_key_columns, primary_key_column_values, **kwargs)
-                for column in columns:
-                    if column['column_name'] in kwargs:
-                        kwarg_for_column = kwargs.get(column['column_name'])
-                        if column['data_type'] in ["json", "jsonb"] and type(kwarg_for_column) == str:
-                            kwarg_for_column = json.loads(kwarg_for_column)
-                        column_metadata = self.__class__.__dict__[column['column_name']]
-                        kwargs[column['column_name']] = column['conversion_function'](column_metadata, self,
-                                                                                      kwarg_for_column)
+
                 with mro.table.disable_insert():
                     for k, v in kwargs.items():
                         self.__dict__[k] = v
@@ -218,14 +209,8 @@ def _create_classes(tables):
                     custom_type = column.get('custom_type')
                     kwarg_for_column = kwargs.get(column['column_name'])
                     if kwarg_for_column is not None:
-                        if column['column_name'] in kwargs:
-                            column_metadata = self.__class__.__dict__[column['column_name']]
-                            kwarg_for_column = column['conversion_function'](column_metadata,
-                                                                                          self,
-                                                                                          kwarg_for_column)
                         if custom_type is not None and type(kwarg_for_column) is not custom_type:
-                            kwarg_for_column = custom_type(**kwarg_for_column)
-                        kwargs[column['column_name']] = kwarg_for_column
+                            kwargs[column['column_name']] = custom_type(**kwarg_for_column)
                 for k, v in kwargs.items():
                     if not hasattr(self, k):
                         raise ValueError(f"{self.__class__.__name__} does not have an attribute {k}")
@@ -253,8 +238,7 @@ def _create_classes(tables):
                       "not_null": column['not_null'],
                       "is_updateable": column['is_updateable'],
                       "get_value_on_insert": column['get_value_on_insert'],
-                      "is_primary_key": column['is_primary_key'],
-                      "conversion_function": column['conversion_function']}
+                      "is_primary_key": column['is_primary_key']}
             if column['data_type'] == 'varchar':
                 kwargs['length'] = column['length']
             if column.get('custom_type') is not None:
