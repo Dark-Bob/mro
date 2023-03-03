@@ -1,10 +1,6 @@
 ﻿import json
-from mro.mro_dict import MroDict
-from mro.mro_list import MroList
-from mro.helpers import mro_objects_to_json
 import mro.connection
 import mro.data_types
-import mro.json_encoder as js_encoder
 import mro.table
 import mro.sqlite
 import mro.custom_types
@@ -16,13 +12,11 @@ def disconnect():
     mro.connection.disconnect()
 
 
-def load_database(connection_function, hooks=None, json_encoder=None):
+def load_database(connection_function, hooks=None):
     print("***********INITIALISING DATABASE************")
     mro.connection.set_connection_function(connection_function)
     mro.connection.set_on_reconnect(init_db)
     mro.connection.set_hooks(hooks)
-    if json_encoder is not None:
-        js_encoder.set_user_encoder(json_encoder)
     connection = mro.connection.connection
     init_db(connection)
     if hooks is not None:
@@ -223,7 +217,6 @@ def _create_classes(tables):
                     self.__dict__[column['column_name']] = column['column_default']
                     custom_type = column.get('custom_type')
                     kwarg_for_column = kwargs.get(column['column_name'])
-
                     if kwarg_for_column is not None:
                         if column['column_name'] in kwargs:
                             column_metadata = self.__class__.__dict__[column['column_name']]

@@ -1,6 +1,6 @@
 import json
 
-from .json_encoder import get_json_encoder_class
+from .json_encoder import JsonEncoder
 from .mro_list import MroList
 from .mro_dict import MroDict
 
@@ -11,7 +11,7 @@ def create_column_name_index_map(cursor):
 
 
 def mro_objects_to_json(obj):
-    json_string = json.dumps(obj, cls=get_json_encoder_class())
+    json_string = json.dumps(obj, cls=JsonEncoder)
     return json_string
 
 
