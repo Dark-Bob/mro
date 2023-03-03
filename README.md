@@ -104,10 +104,10 @@ else:
 - To run the tests you will need to have a local postgres running, to do this run the following command:
 
 ```bash
-docker run -it -d -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust --name database postgres
+docker run --rm -it -d -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust --name database postgres
 ```
 
-The create a file in your project root directory called my_connection with a function like below:
+Then create a file in your project root directory called `my_connection.py` with a function like below:
 
 ```python
 import psycopg2
