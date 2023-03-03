@@ -151,7 +151,7 @@ def create_custom_types(connection):
                     col_name = fields[i][0]
                     col_type = fields[i][1]
                     col_value = values[i]
-                    if len(values[i]) is 0:
+                    if len(values[i]) == 0:
                         dict[col_name] = None
                     else:
                         dict[col_name] = postgres_type_to_python_map[col_type](col_value)
