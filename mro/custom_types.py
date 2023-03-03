@@ -108,7 +108,7 @@ def create_custom_types(connection):
         type_name = custom_type[0]
         if type_name == 'hstore' or type_name == 'ghstore':
             continue
-        mro.data_types.type_map[type_name] = [type_name, customColumnToDataType, mro.data_types.default_transform, mro.data_types.default_convert]
+        mro.data_types.type_map[type_name] = [type_name, customColumnToDataType, mro.data_types.default_transform]
         psycopg2.extras.register_composite(type_name, connection)
 
         cursor2 = connection.cursor()
@@ -146,16 +146,16 @@ def create_custom_types(connection):
                     return None
                 value = value.strip('(').rstrip(')')
                 values = list(csv.reader([value]))[0]
-                result_dict = {}
+                dict = {}
                 for i in range(len(fields)):
                     col_name = fields[i][0]
                     col_type = fields[i][1]
                     col_value = values[i]
-                    if len(values[i]) == 0:
-                        result_dict[col_name] = None
+                    if len(values[i]) is 0:
+                        dict[col_name] = None
                     else:
-                        result_dict[col_name] = postgres_type_to_python_map[col_type](col_value)
-                return new_custom_class(**result_dict)
+                        dict[col_name] = postgres_type_to_python_map[col_type](col_value)
+                return new_custom_class(**dict)
 
             cursor3 = connection.cursor()
             # Get the postgres type object id for this custom type
