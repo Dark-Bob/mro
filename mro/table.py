@@ -9,9 +9,7 @@ from tenacity import before_sleep_log, retry, stop_after_attempt, wait_random_ex
 import mro.connection as con
 import mro.data_types
 import mro.foreign_keys
-from mro.mro_dict import MroDict
-from mro.mro_list import MroList
-from mro.helpers import mro_objects_to_json
+
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +180,7 @@ class table(object):
         if table._insert.disabled:
             return
 
-        keys = list(kwargs.keys())
+        keys = kwargs.keys()
         if len(keys) == 0:
             cols = 'default'
             vals_str = ''
@@ -191,9 +189,6 @@ class table(object):
             kwargs = table._convert_numpy_types_to_python(kwargs)
             cols = '({})'.format(', '.join(keys))
             vals = [x if not isinstance(x, mro.foreign_keys.foreign_key) else x.value for x in kwargs.values()]
-            for i in range(len(vals)):
-                if isinstance(cls.__dict__[keys[i]], mro.data_types.json) and not isinstance(vals[i], str):
-                    vals[i] = mro_objects_to_json(vals[i])
             vals_str_list = ["%s"] * len(vals)
             vals_str = ' ({})'.format(', '.join(vals_str_list))
 
@@ -249,10 +244,6 @@ class table(object):
 
         keys = list(kwargs.keys())
         vals = [x if not isinstance(x, mro.foreign_keys.foreign_key) else x.value for x in kwargs.values()]
-        for i in range(len(vals)):
-            if isinstance(cls.__dict__[list(keys)[i]], mro.data_types.json) and not isinstance(vals[i], str):
-                vals[i] = mro_objects_to_json(vals[i])
-
         vals = vals + match_column_values
         update_column_str = ", ".join([c + '=%s' for c in keys])
         match_column_str = " and ".join([c + '=%s' for c in match_columns])
