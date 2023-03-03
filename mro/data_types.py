@@ -95,7 +95,7 @@ class database_type(object):
             if self.not_null:
                 raise ValueError(f'The value of [{self.name}] cannot be null.')
         else:
-            # may need to move out into derived class or ceate another layer for basic types
+            # may need to move out into derived class or create another layer for basic types
             if type(value) is not self.python_type:
                 raise TypeError(f'Value should be of type [{self.python_type.__name__}] not [{value.__class__.__name__}]')
             self.validate_set(value)
