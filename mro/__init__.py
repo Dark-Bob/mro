@@ -1,4 +1,5 @@
-﻿import mro.connection
+﻿import json
+import mro.connection
 import mro.data_types
 import mro.table
 import mro.sqlite
@@ -226,7 +227,13 @@ def _create_classes(tables):
                 self.update = types.MethodType(update_function, self)
                 self.delete = types.MethodType(delete_function, self)
 
-            attrib_dict = {'__init__': init_function}
+            def to_dict(self):
+                d = self.__dict__
+                del d['update']
+                del d['delete']
+                return d
+
+            attrib_dict = {'__init__': init_function, 'to_dict': to_dict}
             table_class = type(name, (mro.table.table,), attrib_dict)
             return table_class
 
